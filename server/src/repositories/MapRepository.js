@@ -34,6 +34,16 @@ export class MapRepository {
     });
   }
 
+  // Лише id і власник: для перевірки доступу без завантаження всіх вузлів
+  findBasic(id) {
+    return this.prisma.mindMap.findUnique({ where: { id }, select: { id: true, ownerId: true } });
+  }
+
+  // Оновлює updatedAt після змін вузлів, щоб карта піднімалась у списку
+  async touch(id) {
+    await this.prisma.mindMap.update({ where: { id }, data: { updatedAt: new Date() } });
+  }
+
   update(id, patch) {
     return this.prisma.mindMap.update({ where: { id }, data: patch });
   }
