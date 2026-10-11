@@ -1,0 +1,96 @@
+// Модель даних Mycelia (розділ "Модель даних" у документі вимог).
+// Свідомо лише типи, що є і в MySQL, і в PostgreSQL (String, Json, @db.Text):
+// той самий файл працює і на MySQL (розробка), і на PostgreSQL (Supabase). Для переходу
+// достатньо змінити provider і заново згенерувати папку migrations.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+
+  maps MindMap[]
+}
+
+// Названа MindMap, а не Map, щоб не перекривати вбудований клас Map у JS/TS.
+model MindMap {
+  id        String   @id @default(uuid())
+  ownerId   String
+  title     String
+  theme     String   @default("default")
+  layout    String   @default("radial") // radial | tree | bilateral
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  owner      User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  nodes      Node[]
+  boundaries Boundary[]
+
+  @@index([ownerId])
+  @@map("maps")
+}
+
+// Дані для патерна Composite: parentId = null означає корінь карти.
+model Node {
+  id        String  @id @default(uuid())
+  mapId     String
+  parentId  String?
+  text      String  @db.Text
+  order     Int     @default(0)
+  collapsed Boolean @default(false)
+  style     Json?
+  category  String? // значок категорії
+  priority  String? // значок терміновості
+
+  map         MindMap      @relation(fields: [mapId], references: [id], onDelete: Cascade)
+  parent      Node?        @relation("NodeTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children    Node[]       @relation("NodeTree")
+  attachments Attachment[]
+
+  @@index([mapId])
+  @@index([parentId])
+}
+
+// Сам файл лежить у сховищі (Supabase Storage), тут тільки ключ.
+model Attachment {
+  id         String   @id @default(uuid())
+  nodeId     String
+  kind       String // file | image | video
+  name       String
+  mime       String
+  size       Int
+  storageKey String
+  createdAt  DateTime @default(now())
+
+  node Node @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+
+  @@index([nodeId])
+}
+
+// Область карти, обведена пунктиром.
+model Boundary {
+  id      String  @id @default(uuid())
+  mapId   String
+  label   String?
+  nodeIds Json // масив id вузлів області
+
+  map MindMap @relation(fields: [mapId], references: [id], onDelete: Cascade)
+
+  @@index([mapId])
+}
+
+// Джерело для патерна Prototype (створення карти із шаблону).
+model Template {
+  id           String @id @default(uuid())
+  title        String
+  treeSnapshot Json
+}
