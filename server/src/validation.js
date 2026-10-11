@@ -26,6 +26,36 @@ export const updateMapSchema = z
   })
   .refine((v) => Object.keys(v).length > 0, 'Немає полів для оновлення');
 
+// ---- Вузли ----
+
+export const PRIORITIES = ['low', 'normal', 'high', 'urgent'];
+
+const nodeText = z.string().max(2000, 'Текст вузла занадто довгий (максимум 2000 символів)');
+const styleSchema = z
+  .record(z.string().max(32), z.union([z.string().max(64), z.number(), z.boolean()]))
+  .refine((v) => Object.keys(v).length <= 20, 'Забагато полів стилю');
+
+export const createNodeSchema = z.object({
+  parentId: z.string().min(1).max(64),
+  text: nodeText.default(''),
+  index: z.number().int().min(0).optional(),
+});
+
+export const updateNodeSchema = z
+  .object({
+    text: nodeText.optional(),
+    collapsed: z.boolean().optional(),
+    style: styleSchema.optional(),
+    category: z.string().trim().min(1).max(32).nullable().optional(),
+    priority: z.enum(PRIORITIES).nullable().optional(),
+  })
+  .refine((v) => Object.keys(v).length > 0, 'Немає полів для оновлення');
+
+export const moveNodeSchema = z.object({
+  parentId: z.string().min(1).max(64),
+  index: z.number().int().min(0).optional(),
+});
+
 export function parse(schema, data) {
   const result = schema.safeParse(data);
   if (!result.success) {

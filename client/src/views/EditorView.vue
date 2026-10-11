@@ -1,19 +1,16 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
-import { http } from '../api/http';
 import NodeItem from '../components/NodeItem.vue';
-import { TreeNode } from '../core/TreeNode';
+import { useMapEditorStore } from '../stores/mapEditor';
 
 const route = useRoute();
-const map = ref(null);
+const store = useMapEditorStore();
 const error = ref('');
-
-const root = computed(() => (map.value ? TreeNode.fromFlat(map.value.nodes) : null));
 
 onMounted(async () => {
   try {
-    map.value = (await http.get(`/maps/${route.params.id}`)).map;
+    await store.load(route.params.id);
   } catch (err) {
     error.value = err.message;
   }
@@ -23,12 +20,15 @@ onMounted(async () => {
 <template>
   <RouterLink to="/maps" class="muted">← До списку карт</RouterLink>
   <p v-if="error" class="error" role="alert">{{ error }}</p>
-  <template v-if="map">
-    <h1>{{ map.title }}</h1>
-    <p class="muted">Розкладка: {{ map.layout }} · вузлів: {{ root?.size() }}</p>
+  <template v-if="store.map">
+    <h1>{{ store.map.title }}</h1>
+    <p class="muted">Розкладка: {{ store.map.layout }} · вузлів: {{ store.root?.size() }}</p>
     <div class="card">
-      <ul class="tree"><NodeItem v-if="root" :node="root" /></ul>
-      <p class="muted note">Тут буде полотно редактора. Поки що це дерево з бази даних, зібране через Composite.</p>
+      <ul class="tree"><NodeItem v-if="store.root" :node="store.root" /></ul>
+      <p class="muted note">
+        Клацни на текст, щоб змінити (Enter — зберегти, Esc — скасувати). Кнопки ＋ і ✕ з'являються при наведенні.
+        Полотно з розкладками буде наступним кроком.
+      </p>
     </div>
   </template>
 </template>
