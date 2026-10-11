@@ -141,4 +141,18 @@ describe('mapEditor store', () => {
     expect(http.patch).toHaveBeenCalledWith('/maps/m1/nodes/b', { collapsed: false });
     expect(store.root.find('b').collapsed).toBe(false);
   });
+
+  it('додає сусіда одразу після вузла, зсуває наступних і виділяє новий', async () => {
+    http.post.mockResolvedValue({ node: row('n', 'r', 'Нова ідея', 1) });
+    await store.addSiblingAndSelect('a');
+    expect(http.post).toHaveBeenCalledWith('/maps/m1/nodes', { parentId: 'r', text: 'Нова ідея', index: 1 });
+    expect(store.root.children.map((c) => c.id)).toEqual(['a', 'n', 'b']);
+    expect(store.selectedId).toBe('n');
+  });
+
+  it('у кореня сусіда немає: Enter на корені додає дитину', async () => {
+    http.post.mockResolvedValue({ node: row('n', 'r', 'Нова ідея', 2) });
+    await store.addSiblingAndSelect('r');
+    expect(store.root.find('n').parent.id).toBe('r');
+  });
 });

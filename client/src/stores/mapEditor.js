@@ -37,8 +37,8 @@ export const useMapEditorStore = defineStore('mapEditor', () => {
     }
   }
 
-  async function addChild(parentId, text = 'Нова ідея') {
-    const { node } = await http.post(base(), { parentId, text });
+  async function addChild(parentId, text = 'Нова ідея', index) {
+    const { node } = await http.post(base(), { parentId, text, index });
     nodes.value.push(node);
     return node;
   }
@@ -55,6 +55,22 @@ export const useMapEditorStore = defineStore('mapEditor', () => {
     if (parent?.collapsed) await patch(parentId, { collapsed: false });
     selectedId.value = node.id;
     return node;
+  }
+
+  // Сусід одразу після вузла (як Enter у XMind). У кореня сусідів немає, тому
+  // для нього це просто нова дитина.
+  async function addSiblingAndSelect(id) {
+    const node = root.value?.find(id);
+    if (!node || node.isRoot) return addChildAndSelect(id);
+    const parentId = node.parent.id;
+    const position = node.parent.children.indexOf(node) + 1;
+    const created = await addChild(parentId, undefined, position);
+    // сервер вставив вузол і зсунув наступних сусідів, відтворюємо це локально
+    const siblings = nodes.value.filter((n) => n.parentId === parentId && n.id !== created.id).sort((a, b) => a.order - b.order);
+    siblings.splice(position, 0, created);
+    siblings.forEach((n, i) => (n.order = i));
+    selectedId.value = created.id;
+    return created;
   }
 
   // Оптимістично: на екрані розкладка міняється одразу, а за помилки повертається назад
@@ -105,6 +121,6 @@ export const useMapEditorStore = defineStore('mapEditor', () => {
 
   return {
     map, nodes, error, selectedId, root, layout, selected,
-    load, select, addChild, addChildAndSelect, setLayout, rename, toggleCollapsed, move, moveAndReveal, remove,
+    load, select, addChild, addChildAndSelect, addSiblingAndSelect, setLayout, rename, toggleCollapsed, move, moveAndReveal, remove,
   };
 });

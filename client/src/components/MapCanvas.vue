@@ -13,7 +13,7 @@ const props = defineProps({
   layout: { type: String, default: 'radial' },
   selectedId: { type: String, default: null },
 });
-const emit = defineEmits(['select', 'toggle', 'move']);
+const emit = defineEmits(['select', 'toggle', 'move', 'rename', 'add-child', 'add-sibling', 'remove']);
 
 const renderer = new MapRenderer(new SvgSceneBackend());
 const scene = computed(() =>
@@ -77,13 +77,20 @@ function onNodeDown(e, n) {
   if (e.button !== 0) return;
   e.stopPropagation(); // тягнути вузол не означає панорамувати полотно
   if (n.isRoot) return; // корінь не переміщується; клік по ньому лише вибирає
-  carry.value = { id: n.id, startX: e.clientX, startY: e.clientY, start: toScene(e), dx: 0, dy: 0, active: false, drop: null };
-  e.currentTarget.ownerSVGElement.setPointerCapture(e.pointerId);
+  carry.value = {
+    id: n.id, startX: e.clientX, startY: e.clientY, start: toScene(e), dx: 0, dy: 0, active: false, drop: null,
+    svg: e.currentTarget.ownerSVGElement, pointerId: e.pointerId,
+  };
+  // Указатель захоплюємо лише коли почалось справжнє перетягування: інакше браузер
+  // віддасть click і dblclick полотну замість вузла, і вибір та згортання зламаються.
 }
 
 function moveCarry(e) {
   const c = carry.value;
-  if (!c.active && Math.hypot(e.clientX - c.startX, e.clientY - c.startY) > 5) c.active = true;
+  if (!c.active && Math.hypot(e.clientX - c.startX, e.clientY - c.startY) > 5) {
+    c.active = true;
+    c.svg.setPointerCapture(c.pointerId);
+  }
   if (!c.active) return;
   const p = toScene(e);
   c.dx = p.x - c.start.x;
@@ -102,6 +109,7 @@ function finishCarry(commit) {
 
 function onNodeClick(id) {
   if (!justDragged) emit('select', id);
+  host.value?.focus({ preventScroll: true }); // щоб гарячі клавіші працювали одразу після кліку
 }
 
 // Підсвітка цілі: рамка навколо батька або риска між сусідами
@@ -145,13 +153,68 @@ function zoomButton(factor) {
   view.value = zoomAt(view.value, { x: size.value.width / 2, y: size.value.height / 2 }, factor);
 }
 
+// ---- правка тексту на полотні ----
+// Поле вводу лежить поверх SVG (звичайний HTML-input зручніший за foreignObject:
+// працюють IME, виділення, автозаповнення), позицію рахуємо з прямокутника вузла.
+const editing = ref(null); // { id, text }
+const editBox = computed(() => {
+  if (!editing.value) return null;
+  const r = rectsById.value.get(editing.value.id);
+  if (!r) return null;
+  const { tx, ty, scale } = view.value;
+  const width = Math.max(r.width * scale, 140);
+  return {
+    left: `${tx + (r.x + r.width / 2) * scale - width / 2}px`,
+    top: `${ty + r.y * scale}px`,
+    width: `${width}px`,
+    height: `${r.height * scale}px`,
+    fontSize: `${Math.min(Math.max(13 * scale, 12), 22)}px`,
+  };
+});
+
+async function edit(id) {
+  const node = props.root.find(id);
+  if (!node) return;
+  editing.value = { id, text: node.text };
+  await nextTick();
+  const input = host.value?.querySelector('.editor');
+  input?.focus();
+  input?.select();
+}
+
+function commitEdit() {
+  const e = editing.value;
+  if (!e) return; // blur після Enter/Esc: уже оброблено
+  editing.value = null;
+  const text = e.text.trim();
+  if (text && text !== props.root.find(e.id)?.text) emit('rename', { id: e.id, text });
+  host.value?.focus({ preventScroll: true });
+}
+
+function cancelEdit() {
+  editing.value = null;
+  host.value?.focus({ preventScroll: true });
+}
+
+// ---- гарячі клавіші (як у XMind) ----
+function onKeydown(e) {
+  if (editing.value || e.ctrlKey || e.metaKey || e.altKey) return;
+  const id = props.selectedId;
+  if (e.key === 'Escape') return emit('select', null);
+  if (!id) return;
+  if (e.key === 'F2') { e.preventDefault(); edit(id); }
+  else if (e.key === 'Enter') { e.preventDefault(); emit('add-sibling', id); }
+  else if (e.key === 'Tab') { e.preventDefault(); emit('add-child', id); }
+  else if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); emit('remove', id); }
+}
+
 const badgeWidth = (count) => String(count).length * 7 + 18;
 
-defineExpose({ fit });
+defineExpose({ fit, edit });
 </script>
 
 <template>
-  <div ref="host" class="canvas" data-testid="canvas">
+  <div ref="host" class="canvas" data-testid="canvas" tabindex="0" @keydown="onKeydown">
     <svg
       class="surface"
       role="group"
@@ -178,14 +241,14 @@ defineExpose({ fit });
           :class="{ root: n.isRoot, selected: n.selected, folded: n.collapsed, dragging: carry?.active && carry.id === n.id }"
           :transform="`translate(${n.rect.x + (carry?.active && carry.id === n.id ? carry.dx : 0)} ${n.rect.y + (carry?.active && carry.id === n.id ? carry.dy : 0)})`"
           role="button"
-          tabindex="0"
+          tabindex="-1"
           :aria-label="n.text || 'без тексту'"
           :aria-pressed="n.selected"
           :data-node-id="n.id"
           @pointerdown="onNodeDown($event, n)"
           @click.stop="onNodeClick(n.id)"
           @dblclick.stop="emit('toggle', n.id)"
-          @keydown.enter.prevent="emit('select', n.id)"
+          @keydown.space.prevent="emit('select', n.id)"
         >
           <title>{{ n.text }}</title>
           <rect :width="n.rect.width" :height="n.rect.height" :rx="n.rect.height / 2" />
@@ -202,6 +265,21 @@ defineExpose({ fit });
         </g>
       </g>
     </svg>
+
+    <input
+      v-if="editBox && editing"
+      v-model="editing.text"
+      class="editor"
+      :style="editBox"
+      maxlength="2000"
+      aria-label="Текст вузла"
+      @keydown.enter.prevent.stop="commitEdit"
+      @keydown.esc.prevent.stop="cancelEdit"
+      @keydown.tab.prevent.stop="commitEdit"
+      @keydown.stop
+      @pointerdown.stop
+      @blur="commitEdit"
+    />
 
     <div class="controls" role="group" aria-label="Масштаб">
       <button class="btn btn-small" aria-label="Зменшити" @click="zoomButton(1 / 1.25)">−</button>
@@ -242,5 +320,10 @@ defineExpose({ fit });
 .badge rect { fill: var(--bg); stroke: var(--accent); stroke-width: 1.2; stroke-dasharray: none; }
 .badge text { fill: var(--accent); font-size: 12px; font-weight: 700; }
 
+.canvas:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.editor {
+  position: absolute; box-sizing: border-box; padding: 0 14px; text-align: center;
+  background: var(--bg); color: var(--text); border: 2px solid var(--accent); border-radius: 999px; outline: none;
+}
 .controls { position: absolute; right: 12px; bottom: 12px; display: flex; gap: 6px; }
 </style>
