@@ -13,12 +13,16 @@ mycelia/
 ├── client/                    Vue 3 + Vite
 │   └── src/
 │       ├── core/              ядро предметної області БЕЗ Vue (патерни живуть тут)
-│       │   └── TreeNode.js    Composite + тести
+│       │   ├── TreeNode.js    Composite
+│       │   ├── layout/        Strategy: radial, tree, bilateral + LayoutContext
+│       │   ├── render/        Bridge: MapRenderer + RenderBackend (SvgSceneBackend)
+│       │   ├── geometry.js    криві між вузлами
+│       │   └── viewport.js    зум, панорама, «вписати»
 │       ├── api/               fetch-обгортка (cookie, обробка помилок)
-│       ├── stores/            Pinia: стан авторизації
+│       ├── stores/            Pinia: авторизація, редактор карти (вузли, виділення, розкладка)
 │       ├── router/            маршрути і guard для сторінок
 │       ├── views/             Login, Register, Maps, Editor
-│       └── components/        AuthForm, NodeItem
+│       └── components/        AuthForm, NodeItem, MapCanvas (SVG-полотно)
 └── server/                    Express + Prisma
     ├── prisma/schema.prisma   модель даних
     ├── src/
@@ -113,18 +117,29 @@ npm run dev:client      # http://localhost:5173
 
 ## Карта патернів
 
-| Патерн | Де буде |
+| Патерн | Де |
 | --- | --- |
 | Composite | `client/src/core/TreeNode.js` (готово) |
+| Strategy | `client/src/core/layout/`: три розкладки, `LayoutContext` міняє їх на льоту (готово); формати експорту ще попереду |
+| Bridge | `client/src/core/render/`: `MapRenderer` не знає, чим малює; зараз бекенд `SvgSceneBackend`, Canvas можна додати без змін у рендерері (готово) |
+| SOA | `server/src/services/*` (AuthService, MapService, NodeService готові) |
 | Prototype | клонування гілки, створення карти з `Template` |
-| Strategy | алгоритми розкладки (`radial`, `tree`, `bilateral`) і формати експорту |
 | Abstract Factory | родини об'єктів за темою: вузол, зв'язок, стиль |
-| Bridge | відображення карти ↔ бекенд малювання (SVG / Canvas) |
-| SOA | `server/src/services/*` |
+
+## Розкладки
+
+Нова карта за замовчуванням двостороння (`bilateral`): це класичний вигляд карти думок, і вона
+найкраще читається. `radial` компактна лише на малих картах: довгі підписи розсувають кільця, на
+великих картах вона розповзається; `tree` росте вниз. Усі три не допускають перетину вузлів
+(перевіряється тестами до 24 дітей кореня), 2000 вузлів рахуються за 5–40 мс.
+
+Керування полотном: колесо миші масштабує навколо курсора, перетягування фону панорамує,
+клік вибирає вузол, подвійний клік згортає або розгортає гілку, Enter на вузлі в фокусі вибирає його.
 
 ## Що далі
 
 1. ~~Редагування вузлів~~ (готово: API, сховище `mapEditor`, правка в списку).
-2. Полотно на SVG, перша розкладка (Strategy) і автоматичні лінії.
-3. Undo/redo, вкладки карт.
-4. Вкладення (`FileService` + Supabase Storage), значки, області.
+2. ~~Полотно на SVG, розкладки (Strategy), автоматичні лінії~~ (готово).
+3. Перетягування вузлів мишею (drag-and-drop), правка тексту прямо на полотні, гарячі клавіші.
+4. Undo/redo, вкладки карт.
+5. Вкладення (`FileService` + Supabase Storage), значки категорій і терміновості, області.
