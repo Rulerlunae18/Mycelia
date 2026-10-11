@@ -77,9 +77,10 @@ function removeSelected() {
       :selected-id="store.selectedId"
       @select="store.select"
       @toggle="(id) => run(() => store.toggleCollapsed(id))"
+      @move="({ id, parentId, index }) => run(() => store.moveAndReveal(id, parentId, index))"
     />
     <p class="muted hint">
-      Колесо миші: масштаб · перетягни фон, щоб посунути карту · подвійний клік по вузлу згортає і розгортає гілку.
+      Колесо миші: масштаб · перетягни фон, щоб посунути карту · подвійний клік по вузлу згортає і розгортає гілку · тягни вузол на середину іншого, щоб зробити його дитиною, або на край, щоб змінити порядок.
     </p>
 
     <details class="card outline">

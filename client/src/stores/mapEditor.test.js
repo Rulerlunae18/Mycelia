@@ -132,4 +132,13 @@ describe('mapEditor store', () => {
     expect(store.root.find('a').parent.id).toBe('b');
     expect(store.root.find('a1').depth).toBe(3);
   });
+
+  it('після переміщення в згорнуту гілку розгортає її', async () => {
+    store.nodes.find((n) => n.id === 'b').collapsed = true;
+    http.post.mockResolvedValue({ changes: [{ id: 'a1', parentId: 'b', order: 0 }, { id: 'a', parentId: 'r', order: 0 }] });
+    http.patch.mockResolvedValue({ node: { id: 'b', collapsed: false } });
+    await store.moveAndReveal('a1', 'b', 0);
+    expect(http.patch).toHaveBeenCalledWith('/maps/m1/nodes/b', { collapsed: false });
+    expect(store.root.find('b').collapsed).toBe(false);
+  });
 });

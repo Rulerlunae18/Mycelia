@@ -88,6 +88,13 @@ export const useMapEditorStore = defineStore('mapEditor', () => {
     applyChanges(changes);
   }
 
+  // Після переміщення в згорнуту гілку розгортаємо її, щоб вузол не зник з очей
+  async function moveAndReveal(id, parentId, index) {
+    await move(id, parentId, index);
+    const parent = nodes.value.find((n) => n.id === parentId);
+    if (parent?.collapsed) await patch(parentId, { collapsed: false });
+  }
+
   async function remove(id) {
     const { deleted, changes } = await http.delete(`${base()}/${id}`);
     const gone = new Set(deleted);
@@ -98,6 +105,6 @@ export const useMapEditorStore = defineStore('mapEditor', () => {
 
   return {
     map, nodes, error, selectedId, root, layout, selected,
-    load, select, addChild, addChildAndSelect, setLayout, rename, toggleCollapsed, move, remove,
+    load, select, addChild, addChildAndSelect, setLayout, rename, toggleCollapsed, move, moveAndReveal, remove,
   };
 });
