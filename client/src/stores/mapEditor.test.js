@@ -63,6 +63,64 @@ describe('mapEditor store', () => {
     expect(store.root.children.map((n) => n.id)).toEqual(['b']);
   });
 
+  it('виділяє вузол, а видалення виділеного піддерева знімає виділення', async () => {
+    store.select('a1');
+    expect(store.selected.text).toBe('A1');
+    http.delete.mockResolvedValue({ deleted: ['a', 'a1'], changes: [] });
+    await store.remove('a');
+    expect(store.selectedId).toBeNull();
+    expect(store.selected).toBeNull();
+  });
+
+  it('видалення іншого вузла виділення не чіпає', async () => {
+    store.select('b');
+    http.delete.mockResolvedValue({ deleted: ['a', 'a1'], changes: [] });
+    await store.remove('a');
+    expect(store.selectedId).toBe('b');
+  });
+
+  it('addChildAndSelect додає вузол, розгортає згорнутого батька і виділяє новий вузол', async () => {
+    store.nodes.find((n) => n.id === 'a').collapsed = true;
+    http.post.mockResolvedValue({ node: row('n', 'a', 'Нова ідея', 1) });
+    http.patch.mockResolvedValue({ node: { ...row('a', 'r', 'A'), collapsed: false } });
+    await store.addChildAndSelect('a');
+    expect(http.patch).toHaveBeenCalledWith('/maps/m1/nodes/a', { collapsed: false });
+    expect(store.root.find('a').collapsed).toBe(false);
+    expect(store.selectedId).toBe('n');
+  });
+
+  it('addChildAndSelect не чіпає розгорнутого батька', async () => {
+    http.post.mockResolvedValue({ node: row('n', 'b', 'Нова ідея') });
+    await store.addChildAndSelect('b');
+    expect(http.patch).not.toHaveBeenCalled();
+    expect(store.selectedId).toBe('n');
+  });
+
+  it('змінює розкладку одразу і зберігає її на сервері', async () => {
+    http.patch.mockResolvedValue({ map: { id: 'm1', layout: 'tree' } });
+    const pending = store.setLayout('tree');
+    expect(store.layout).toBe('tree');
+    await pending;
+    expect(http.patch).toHaveBeenCalledWith('/maps/m1', { layout: 'tree' });
+  });
+
+  it('якщо сервер відмовив, розкладка повертається назад', async () => {
+    http.patch.mockRejectedValue(new Error('Мережа'));
+    await expect(store.setLayout('bilateral')).rejects.toThrow('Мережа');
+    expect(store.layout).toBe('radial');
+  });
+
+  it('та сама розкладка запиту не робить', async () => {
+    await store.setLayout('radial');
+    expect(http.patch).not.toHaveBeenCalled();
+  });
+
+  it('завантаження іншої карти скидає виділення', async () => {
+    store.select('a');
+    await store.load('m1');
+    expect(store.selectedId).toBeNull();
+  });
+
   it('переміщує вузол за відповіддю сервера', async () => {
     http.post.mockResolvedValue({
       changes: [

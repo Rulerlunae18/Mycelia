@@ -32,6 +32,14 @@ describe('карти', () => {
     expect(list.body.maps[0].nodes).toBeUndefined();
   });
 
+  it('нова карта за замовчуванням двостороння, але розкладку можна задати', async () => {
+    const agent = await loggedInAgent(app, 'a@example.com');
+    const plain = await agent.post('/api/maps').send({ title: 'Звичайна' });
+    expect(plain.body.map.layout).toBe('bilateral');
+    const custom = await agent.post('/api/maps').send({ title: 'Дерево', layout: 'tree' });
+    expect(custom.body.map.layout).toBe('tree');
+  });
+
   it('перевіряє дані: порожня назва і невідома розкладка дають 400', async () => {
     const agent = await loggedInAgent(app, 'a@example.com');
     await agent.post('/api/maps').send({ title: '   ' }).expect(400);
