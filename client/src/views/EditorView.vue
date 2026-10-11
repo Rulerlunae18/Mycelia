@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, ref } from 'vue';
+import { nextTick, onMounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import MapCanvas from '../components/MapCanvas.vue';
 import NodeItem from '../components/NodeItem.vue';
@@ -9,6 +9,7 @@ import { useMapEditorStore } from '../stores/mapEditor';
 const route = useRoute();
 const store = useMapEditorStore();
 const error = ref('');
+const canvas = ref(null);
 
 onMounted(async () => {
   try {
@@ -27,10 +28,19 @@ async function run(action) {
   }
 }
 
-const addChild = () => run(() => store.addChildAndSelect(store.selectedId));
+// Новий вузол одразу відкривається для правки: можна друкувати ідеї підряд
+async function addAndEdit(create) {
+  await run(async () => {
+    const node = await create();
+    await nextTick();
+    canvas.value?.edit(node.id);
+  });
+}
+const addChild = (id = store.selectedId) => addAndEdit(() => store.addChildAndSelect(id));
+const addSibling = (id = store.selectedId) => addAndEdit(() => store.addSiblingAndSelect(id));
 
-function removeSelected() {
-  const node = store.selected;
+function removeSelected(id = store.selectedId) {
+  const node = store.root?.find(id);
   if (!node || node.isRoot) return;
   const extra = node.size() - 1;
   const text = node.text || 'без тексту';
@@ -63,8 +73,9 @@ function removeSelected() {
       <div class="selection">
         <template v-if="store.selected">
           <span class="muted name">Вибрано: <b>{{ store.selected.text || 'без тексту' }}</b></span>
-          <button class="btn btn-small" @click="addChild">＋ Вкладений</button>
-          <button v-if="!store.selected.isRoot" class="btn btn-small btn-danger" @click="removeSelected">✕ Видалити</button>
+          <button class="btn btn-small" @click="canvas?.edit(store.selectedId)">✎ Текст</button>
+          <button class="btn btn-small" @click="addChild()">＋ Вкладений</button>
+          <button v-if="!store.selected.isRoot" class="btn btn-small btn-danger" @click="removeSelected()">✕ Видалити</button>
         </template>
         <span v-else class="muted">Клацни вузол, щоб вибрати</span>
       </div>
@@ -72,15 +83,21 @@ function removeSelected() {
 
     <MapCanvas
       v-if="store.root"
+      ref="canvas"
       :root="store.root"
       :layout="store.layout"
       :selected-id="store.selectedId"
       @select="store.select"
       @toggle="(id) => run(() => store.toggleCollapsed(id))"
+      @rename="({ id, text }) => run(() => store.rename(id, text))"
+      @add-child="addChild"
+      @add-sibling="addSibling"
+      @remove="removeSelected"
       @move="({ id, parentId, index }) => run(() => store.moveAndReveal(id, parentId, index))"
     />
     <p class="muted hint">
       Колесо миші: масштаб · перетягни фон, щоб посунути карту · подвійний клік по вузлу згортає і розгортає гілку · тягни вузол на середину іншого, щоб зробити його дитиною, або на край, щоб змінити порядок.
+      <br />Клавіші: <kbd>Tab</kbd> вкладений · <kbd>Enter</kbd> сусід · <kbd>F2</kbd> текст · <kbd>Delete</kbd> видалити · <kbd>Esc</kbd> зняти виділення.
     </p>
 
     <details class="card outline">
@@ -95,6 +112,7 @@ function removeSelected() {
 .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; margin-bottom: 12px; }
 .seg { display: inline-flex; gap: 4px; }
 .seg .btn.active { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+kbd { font: inherit; font-size: 0.8em; padding: 1px 6px; border: 1px solid var(--border); border-radius: 5px; background: var(--surface-2); }
 .count { font-size: 0.875rem; }
 .selection { display: flex; align-items: center; gap: 8px; margin-left: auto; min-width: 0; }
 .name { max-width: 28ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
