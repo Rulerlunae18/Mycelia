@@ -3,6 +3,7 @@
 // сцену збирає MapRenderer через Bridge, а компонент лише показує її у SVG
 // і відповідає за панорамування та зум.
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { dropTarget } from '../core/dragdrop';
 import { MapRenderer } from '../core/render/MapRenderer';
 import { SvgSceneBackend } from '../core/render/SvgSceneBackend';
 import { fitTransform, identity, panBy, zoomAt } from '../core/viewport';
@@ -12,7 +13,7 @@ const props = defineProps({
   layout: { type: String, default: 'radial' },
   selectedId: { type: String, default: null },
 });
-const emit = defineEmits(['select', 'toggle']);
+const emit = defineEmits(['select', 'toggle', 'move']);
 
 const renderer = new MapRenderer(new SvgSceneBackend());
 const scene = computed(() =>
@@ -58,7 +59,68 @@ function onPointerDown(e) {
   e.currentTarget.setPointerCapture(e.pointerId);
 }
 
+// ---- перетягування вузла ----
+// carry: { id, startX, startY, dx, dy (у координатах сцени), active, drop }
+const carry = ref(null);
+let justDragged = false;
+const rectsById = computed(() => new Map(scene.value.nodes.map((n) => [n.id, n.rect])));
+
+function toScene(e) {
+  const box = host.value.getBoundingClientRect();
+  return {
+    x: (e.clientX - box.left - view.value.tx) / view.value.scale,
+    y: (e.clientY - box.top - view.value.ty) / view.value.scale,
+  };
+}
+
+function onNodeDown(e, n) {
+  if (e.button !== 0) return;
+  e.stopPropagation(); // тягнути вузол не означає панорамувати полотно
+  if (n.isRoot) return; // корінь не переміщується; клік по ньому лише вибирає
+  carry.value = { id: n.id, startX: e.clientX, startY: e.clientY, start: toScene(e), dx: 0, dy: 0, active: false, drop: null };
+  e.currentTarget.ownerSVGElement.setPointerCapture(e.pointerId);
+}
+
+function moveCarry(e) {
+  const c = carry.value;
+  if (!c.active && Math.hypot(e.clientX - c.startX, e.clientY - c.startY) > 5) c.active = true;
+  if (!c.active) return;
+  const p = toScene(e);
+  c.dx = p.x - c.start.x;
+  c.dy = p.y - c.start.y;
+  c.drop = dropTarget(props.root, rectsById.value, c.id, p, { axis: props.layout === 'tree' ? 'x' : 'y' });
+}
+
+function finishCarry(commit) {
+  const c = carry.value;
+  carry.value = null;
+  if (!c?.active) return;
+  justDragged = true; // браузер зараз пришле click: його ігноруємо
+  setTimeout(() => (justDragged = false), 0);
+  if (commit && c.drop) emit('move', { id: c.id, parentId: c.drop.parentId, index: c.drop.index });
+}
+
+function onNodeClick(id) {
+  if (!justDragged) emit('select', id);
+}
+
+// Підсвітка цілі: рамка навколо батька або риска між сусідами
+const dropMark = computed(() => {
+  const d = carry.value?.drop;
+  if (!d) return null;
+  const r = rectsById.value.get(d.targetId);
+  if (d.kind === 'child') return { kind: 'child', x: r.x - 4, y: r.y - 4, width: r.width + 8, height: r.height + 8 };
+  const horizontal = props.layout === 'tree'; // у дереві сусіди стоять поруч, риска вертикальна
+  if (horizontal) {
+    const x = d.kind === 'before' ? r.x - 6 : r.x + r.width + 6;
+    return { kind: 'line', x1: x, y1: r.y - 4, x2: x, y2: r.y + r.height + 4 };
+  }
+  const y = d.kind === 'before' ? r.y - 6 : r.y + r.height + 6;
+  return { kind: 'line', x1: r.x - 4, y1: y, x2: r.x + r.width + 4, y2: y };
+});
+
 function onPointerMove(e) {
+  if (carry.value) return moveCarry(e);
   if (!drag) return;
   if (Math.hypot(e.clientX - drag.startX, e.clientY - drag.startY) > 3) drag.moved = true;
   if (drag.moved) view.value = panBy(view.value, e.clientX - drag.lastX, e.clientY - drag.lastY);
@@ -66,7 +128,8 @@ function onPointerMove(e) {
   drag.lastY = e.clientY;
 }
 
-function onPointerUp() {
+function onPointerUp(e) {
+  if (carry.value) return finishCarry(e.type === 'pointerup');
   // Клік по порожньому місцю без перетягування знімає виділення
   if (drag && !drag.moved) emit('select', null);
   drag = null;
@@ -112,14 +175,15 @@ defineExpose({ fit });
           v-for="n in scene.nodes"
           :key="n.id"
           class="node"
-          :class="{ root: n.isRoot, selected: n.selected, folded: n.collapsed }"
-          :transform="`translate(${n.rect.x} ${n.rect.y})`"
+          :class="{ root: n.isRoot, selected: n.selected, folded: n.collapsed, dragging: carry?.active && carry.id === n.id }"
+          :transform="`translate(${n.rect.x + (carry?.active && carry.id === n.id ? carry.dx : 0)} ${n.rect.y + (carry?.active && carry.id === n.id ? carry.dy : 0)})`"
           role="button"
           tabindex="0"
           :aria-label="n.text || 'без тексту'"
           :aria-pressed="n.selected"
-          @pointerdown.stop
-          @click.stop="emit('select', n.id)"
+          :data-node-id="n.id"
+          @pointerdown="onNodeDown($event, n)"
+          @click.stop="onNodeClick(n.id)"
           @dblclick.stop="emit('toggle', n.id)"
           @keydown.enter.prevent="emit('select', n.id)"
         >
@@ -130,6 +194,11 @@ defineExpose({ fit });
             <rect :width="badgeWidth(n.hiddenCount)" height="18" rx="9" />
             <text :x="badgeWidth(n.hiddenCount) / 2" y="9">+{{ n.hiddenCount }}</text>
           </g>
+        </g>
+
+        <g v-if="dropMark" class="drop-mark" pointer-events="none">
+          <rect v-if="dropMark.kind === 'child'" v-bind="{ x: dropMark.x, y: dropMark.y, width: dropMark.width, height: dropMark.height }" rx="20" />
+          <line v-else v-bind="{ x1: dropMark.x1, y1: dropMark.y1, x2: dropMark.x2, y2: dropMark.y2 }" />
         </g>
       </g>
     </svg>
@@ -165,6 +234,9 @@ defineExpose({ fit });
 .node.selected rect { stroke: var(--accent); stroke-width: 3; }
 .node.root rect { fill: var(--accent); stroke: var(--accent); }
 .node.root text { fill: var(--accent-ink); font-size: 15px; font-weight: 700; }
+.node.dragging { opacity: 0.75; cursor: grabbing; pointer-events: none; }
+.drop-mark rect { fill: rgba(126, 224, 164, 0.1); stroke: var(--accent); stroke-width: 2; stroke-dasharray: 6 4; }
+.drop-mark line { stroke: var(--accent); stroke-width: 4; stroke-linecap: round; }
 .node.folded > rect { stroke-dasharray: 5 3; }
 
 .badge rect { fill: var(--bg); stroke: var(--accent); stroke-width: 1.2; stroke-dasharray: none; }
