@@ -73,4 +73,11 @@ describe('MapCanvas', () => {
     expect(html).toContain('&lt;i&gt;Фаза');
     expect(html).not.toContain('<i>Фаза');
   });
+
+  it('показує значок вкладень із кількістю лише там, де вони є', async () => {
+    const { root } = sample();
+    const html = await render({ root, layout: 'tree', attachmentCounts: { a: 4 } });
+    expect(html.match(/class="clip"/g)).toHaveLength(1);
+    expect(html).toMatch(/<title[^>]*>Вкладень: 4<\/title>/);
+  });
 });

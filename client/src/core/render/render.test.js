@@ -171,4 +171,11 @@ describe('SvgSceneBackend', () => {
     });
     expect(scene.boundaries[0].look.stroke).not.toBe(scene.boundaries[1].look.stroke);
   });
+
+  it('передає кількість вкладень вузла бекенду', () => {
+    const { root } = sample();
+    const scene = new MapRenderer(new SvgSceneBackend()).render(root, { attachmentCounts: { a: 3 } });
+    expect(scene.nodes.find((n) => n.id === 'a').attachmentCount).toBe(3);
+    expect(scene.nodes.find((n) => n.id === 'b').attachmentCount).toBe(0);
+  });
 });

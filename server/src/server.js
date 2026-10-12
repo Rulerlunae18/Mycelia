@@ -1,14 +1,17 @@
 import { createApp } from './app.js';
 import { config } from './config.js';
 import { prisma } from './db.js';
+import { AttachmentRepository } from './repositories/AttachmentRepository.js';
 import { BoundaryRepository } from './repositories/BoundaryRepository.js';
 import { MapRepository } from './repositories/MapRepository.js';
 import { NodeRepository } from './repositories/NodeRepository.js';
 import { UserRepository } from './repositories/UserRepository.js';
+import { AttachmentService } from './services/AttachmentService.js';
 import { AuthService } from './services/AuthService.js';
 import { BoundaryService } from './services/BoundaryService.js';
 import { MapService } from './services/MapService.js';
 import { NodeService } from './services/NodeService.js';
+import { LocalDiskStorage } from './storage/LocalDiskStorage.js';
 
 // Точка складання: репозиторії -> сервіси -> HTTP-застосунок.
 const authService = new AuthService({
@@ -17,16 +20,23 @@ const authService = new AuthService({
   jwtExpiresSeconds: config.jwtExpiresSeconds,
 });
 const mapRepository = new MapRepository(prisma);
-const mapService = new MapService({ mapRepository });
 const nodeRepository = new NodeRepository(prisma);
+// Сховище файлів: зараз папка на диску, потім Supabase Storage (той самий інтерфейс)
+const attachmentService = new AttachmentService({
+  mapRepository,
+  nodeRepository,
+  attachmentRepository: new AttachmentRepository(prisma),
+  storage: new LocalDiskStorage(config.uploadDir),
+});
+const mapService = new MapService({ mapRepository, attachmentService });
 const boundaryService = new BoundaryService({
   mapRepository,
   nodeRepository,
   boundaryRepository: new BoundaryRepository(prisma),
 });
-const nodeService = new NodeService({ mapRepository, nodeRepository, boundaryService });
+const nodeService = new NodeService({ mapRepository, nodeRepository, boundaryService, attachmentService });
 
-const app = createApp({ authService, mapService, nodeService, boundaryService });
+const app = createApp({ authService, mapService, nodeService, boundaryService, attachmentService });
 const server = app.listen(config.port, () => {
   console.log(`Mycelia API: http://localhost:${config.port}`);
 });

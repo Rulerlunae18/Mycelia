@@ -4,7 +4,7 @@ import { http } from '../api/http';
 import { useMapEditorStore } from './mapEditor';
 
 vi.mock('../api/http', () => ({
-  http: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() },
+  http: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn(), upload: vi.fn() },
 }));
 
 const row = (id, parentId, text, order = 0) => ({
@@ -198,5 +198,37 @@ describe('mapEditor store', () => {
     http.delete.mockResolvedValue({ deleted: ['a1'], changes: [] });
     await store.remove('a1');
     expect(store.boundaries.map((b) => [b.id, b.nodeIds])).toEqual([['b1', ['a']]]);
+  });
+
+  it('вантажить вкладення на вузол, рахує їх і дає вибраному вузлу список', async () => {
+    http.upload.mockImplementation(async (_path, file) => ({
+      attachment: { id: `att-${file.name}`, nodeId: 'a', kind: 'image', name: file.name, size: file.size },
+    }));
+    const done = await store.uploadAttachments('a', [{ name: 'x.png', size: 10 }, { name: 'y.png', size: 20 }]);
+    expect(done).toBe(2);
+    expect(http.upload).toHaveBeenCalledWith('/maps/m1/nodes/a/attachments', { name: 'x.png', size: 10 });
+    expect(store.attachmentCounts).toEqual({ a: 2 });
+    store.select('a');
+    expect(store.selectedAttachments.map((a) => a.name)).toEqual(['x.png', 'y.png']);
+    store.select('b');
+    expect(store.selectedAttachments).toEqual([]);
+  });
+
+  it('не вантажить завідомо непридатний файл, а вже завантажені лишає', async () => {
+    http.upload.mockResolvedValue({ attachment: { id: 'ok', nodeId: 'a', kind: 'file', name: 'ok.txt', size: 5 } });
+    await expect(
+      store.uploadAttachments('a', [{ name: 'ok.txt', size: 5 }, { name: 'huge.bin', size: 999 * 1024 * 1024 }, { name: 'later.txt', size: 1 }]),
+    ).rejects.toThrow(/huge\.bin/);
+    expect(http.upload).toHaveBeenCalledTimes(1);
+    expect(store.attachmentCounts).toEqual({ a: 1 });
+  });
+
+  it('видаляє вкладення', async () => {
+    http.upload.mockResolvedValue({ attachment: { id: 'k', nodeId: 'a', kind: 'file', name: 'k.txt', size: 5 } });
+    await store.uploadAttachments('a', [{ name: 'k.txt', size: 5 }]);
+    http.delete.mockResolvedValue(null);
+    await store.removeAttachment('a', 'k');
+    expect(http.delete).toHaveBeenCalledWith('/maps/m1/attachments/k');
+    expect(store.attachmentCounts).toEqual({});
   });
 });

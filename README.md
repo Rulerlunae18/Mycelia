@@ -81,6 +81,9 @@ npm run dev:client      # http://localhost:5173
 | POST | `/api/maps/:id/nodes` | `{ parentId, text?, index? }` → новий вузол (index — позиція серед сусідів) |
 | PATCH | `/api/maps/:id/nodes/:nodeId` | `text`, `collapsed`, `style`, `category` (idea / task / question / info / risk / decision або null), `priority` (low / normal / high / urgent або null) |
 | POST | `/api/maps/:id/nodes/:nodeId/move` | `{ parentId, index? }` → список змінених позицій `{ id, parentId, order }` |
+| POST | `/api/maps/:id/nodes/:nodeId/attachments?name=&mime=` | тіло: сирі байти файлу (до 25 МБ, до 10 на вузол, до 100 на карту) → опис вкладення |
+| GET | `/api/maps/:id/attachments/:aid/file` | сам файл (картинки й відео inline, підтримується Range; решта лише для завантаження) |
+| DELETE | `/api/maps/:id/attachments/:aid` | видаляє вкладення і файл |
 | POST | `/api/maps/:id/boundaries` | `{ label?, nodeIds[] }` → пунктирна область навколо групи вузлів (до 50 на карту) |
 | PATCH | `/api/maps/:id/boundaries/:bid` | `label`, `nodeIds` |
 | DELETE | `/api/maps/:id/boundaries/:bid` | видаляє область |
@@ -171,10 +174,30 @@ npm run dev:client      # http://localhost:5173
 видалений вузол сам зникає з області, а порожня область видаляється. Склад області не
 змінюється, коли вузли переносять: вона описує групу, а не місце на полотні.
 
+## Вкладення
+
+Вибери вузол: під картою з'являється панель вкладень. Файли додаються кнопкою або перетягуванням,
+картинки показуються мініатюрами, відео програється прямо в панелі (`<video controls>`, Range),
+решта файлів завантажується. На вузлі з вкладеннями видно скріпку з кількістю.
+
+Безпека (файл користувача не має виконувати код у нашому домені):
+- тип визначається за першими байтами файлу, а не за заявленим браузером: лише PNG, JPEG, GIF, WebP,
+  MP4 і WebM вважаються картинкою чи відео; SVG, HTML та все інше стає звичайним файлом;
+- звичайний файл віддається як `application/octet-stream` з `Content-Disposition: attachment`;
+- усі файли йдуть із `Content-Security-Policy: sandbox` і `nosniff`, ім'я очищається від шляху;
+- ключ у сховищі `mapId/uuid` не містить імені від користувача, і формат ключа перевіряється;
+- чужа карта чи вкладення дають 404; видалення вузла, вкладення чи карти стирає й файл.
+
+Файли зараз лежать у `server/uploads` (папка в `.gitignore`, змінюється через `UPLOAD_DIR`).
+Це Strategy: `AttachmentService` знає лише інтерфейс `put / size / read / remove`
+(`server/src/storage/`), тож перехід на Supabase Storage означає ще один клас того ж інтерфейсу.
+На Render диск тимчасовий, тому до деплою сховище треба перенести (див. «Деплой»).
+
 ## Що далі
 
 1. ~~Редагування вузлів~~ (готово: API, сховище `mapEditor`, правка в списку).
 2. ~~Полотно на SVG, розкладки (Strategy), автоматичні лінії~~ (готово).
+2d. ~~Вкладення (локально)~~ (готово).
 2c. ~~Області пунктиром~~ (готово).
 2b. ~~Вкладки карт~~ (готово).
 2a. ~~Значки категорій і терміновості, теми (Abstract Factory)~~ (готово).

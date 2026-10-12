@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { Readable } from 'node:stream';
 
 // Репозиторії в пам'яті: ті самі методи, що й у Prisma-версій.
 export class FakeUserRepository {
@@ -21,6 +22,7 @@ export class FakeUserRepository {
 
 export class FakeMapRepository {
   maps = [];
+  attachmentRepository = null; // підставляється в makeTestApp, щоб карта віддавала вкладення вузлів
 
   async listByOwner(ownerId) {
     return this.maps.filter((m) => m.ownerId === ownerId).map(({ nodes, ...rest }) => rest);
@@ -44,7 +46,16 @@ export class FakeMapRepository {
   }
 
   async findById(id) {
-    return this.maps.find((m) => m.id === id) ?? null;
+    const map = this.maps.find((m) => m.id === id);
+    if (!map) return null;
+    // як Prisma include: вкладення лежать усередині вузлів
+    return {
+      ...map,
+      nodes: map.nodes.map((n) => ({
+        ...n,
+        attachments: (this.attachmentRepository?.items ?? []).filter((a) => a.nodeId === n.id),
+      })),
+    };
   }
 
   async findBasic(id) {
@@ -161,5 +172,70 @@ export class FakeBoundaryRepository {
 
   async delete(id) {
     for (const map of this.mapRepository.maps) map.boundaries = map.boundaries.filter((b) => b.id !== id);
+  }
+}
+
+export class FakeAttachmentRepository {
+  items = [];
+
+  constructor(mapRepository) {
+    this.mapRepository = mapRepository;
+  }
+
+  #mapIdOf(nodeId) {
+    return this.mapRepository.maps.find((m) => m.nodes.some((n) => n.id === nodeId))?.id ?? null;
+  }
+
+  async findById(id) {
+    const a = this.items.find((x) => x.id === id);
+    return a ? { ...a, node: { mapId: this.#mapIdOf(a.nodeId) } } : null;
+  }
+
+  async countByNode(nodeId) {
+    return this.items.filter((a) => a.nodeId === nodeId).length;
+  }
+
+  async countByMap(mapId) {
+    return this.items.filter((a) => this.#mapIdOf(a.nodeId) === mapId).length;
+  }
+
+  async findByNodes(nodeIds) {
+    return this.items.filter((a) => nodeIds.includes(a.nodeId)).map((a) => ({ ...a }));
+  }
+
+  async findByMap(mapId) {
+    return this.items.filter((a) => this.#mapIdOf(a.nodeId) === mapId).map((a) => ({ ...a }));
+  }
+
+  async create(data) {
+    const item = { id: randomUUID(), createdAt: new Date(), ...data };
+    this.items.push(item);
+    return { ...item };
+  }
+
+  async delete(id) {
+    this.items = this.items.filter((a) => a.id !== id);
+  }
+}
+
+// Сховище в пам'яті: той самий інтерфейс, що й LocalDiskStorage
+export class FakeStorage {
+  files = new Map();
+
+  async put(key, buffer) {
+    this.files.set(key, Buffer.from(buffer));
+  }
+
+  async size(key) {
+    return this.files.has(key) ? this.files.get(key).length : null;
+  }
+
+  read(key, { start = 0, end } = {}) {
+    const buf = this.files.get(key);
+    return Readable.from([buf.subarray(start, end === undefined ? undefined : end + 1)]);
+  }
+
+  async remove(key) {
+    this.files.delete(key);
   }
 }

@@ -23,7 +23,7 @@ export class MapRenderer {
 
   // layout: назва розкладки, selectedId: виділений вузол, theme: назва теми
   // (стилі дає фабрика теми, Abstract Factory)
-  render(root, { layout, selectedId = null, theme, boundaries = [] } = {}) {
+  render(root, { layout, selectedId = null, theme, boundaries = [], attachmentCounts = {} } = {}) {
     if (layout) this.layout.use(layout);
     const factory = getTheme(theme);
     const { rects, bounds } = this.layout.compute(root);
@@ -78,6 +78,7 @@ export class MapRenderer {
         priority: node.extra.priority ?? null,
         style: node.extra.style ?? null,
         look: factory.createNodeStyle({ isRoot: node.isRoot, selected: node.id === selectedId }),
+        attachmentCount: attachmentCounts[node.id] ?? 0,
         inset: category ? CATEGORY_INSET : 0,
         marks: {
           category: category && { ...category, ...factory.createMarkStyle('category', category.key) },
