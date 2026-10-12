@@ -119,6 +119,14 @@ describe('вузли: зміна', () => {
     await agent.patch(`${base(mapId)}/${n.id}`).send({}).expect(400);
   });
 
+  it('відхиляє невідому категорію (400)', async () => {
+    const n = await addNode(agent, mapId, rootId, 'X');
+    await agent.patch(`${base(mapId)}/${n.id}`).send({ category: 'banana' }).expect(400);
+    for (const category of ['idea', 'task', 'question', 'info', 'risk', 'decision']) {
+      await agent.patch(`${base(mapId)}/${n.id}`).send({ category }).expect(200);
+    }
+  });
+
   it('неіснуючий вузол дає 404', async () => {
     await agent.patch(`${base(mapId)}/nope`).send({ text: 'x' }).expect(404);
   });

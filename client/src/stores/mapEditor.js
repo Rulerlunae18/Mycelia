@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import { http } from '../api/http';
 import { DEFAULT_LAYOUT } from '../core/layout';
+import { DEFAULT_THEME } from '../core/theme';
 import { TreeNode } from '../core/TreeNode';
 
 // Состояние открытой карты. Источник правды: плоский список nodes
@@ -15,6 +16,7 @@ export const useMapEditorStore = defineStore('mapEditor', () => {
 
   const root = computed(() => (nodes.value.length ? TreeNode.fromFlat(nodes.value) : null));
   const layout = computed(() => map.value?.layout ?? DEFAULT_LAYOUT);
+  const theme = computed(() => map.value?.theme ?? DEFAULT_THEME);
   const selected = computed(() => (selectedId.value && root.value ? root.value.find(selectedId.value) : null));
   const base = () => `/maps/${map.value.id}/nodes`;
 
@@ -86,6 +88,18 @@ export const useMapEditorStore = defineStore('mapEditor', () => {
     }
   }
 
+  async function setTheme(name) {
+    const previous = map.value.theme;
+    if (previous === name) return;
+    map.value.theme = name;
+    try {
+      await http.patch(`/maps/${map.value.id}`, { theme: name });
+    } catch (err) {
+      map.value.theme = previous;
+      throw err;
+    }
+  }
+
   async function patch(id, data) {
     const { node } = await http.patch(`${base()}/${id}`, data);
     const target = nodes.value.find((n) => n.id === id);
@@ -120,7 +134,7 @@ export const useMapEditorStore = defineStore('mapEditor', () => {
   }
 
   return {
-    map, nodes, error, selectedId, root, layout, selected,
-    load, select, addChild, addChildAndSelect, addSiblingAndSelect, setLayout, rename, toggleCollapsed, move, moveAndReveal, remove,
+    map, nodes, error, selectedId, root, layout, theme, selected,
+    load, select, addChild, addChildAndSelect, addSiblingAndSelect, setLayout, setTheme, patch, rename, toggleCollapsed, move, moveAndReveal, remove,
   };
 });

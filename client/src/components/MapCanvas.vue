@@ -12,13 +12,27 @@ const props = defineProps({
   root: { type: Object, required: true },
   layout: { type: String, default: 'radial' },
   selectedId: { type: String, default: null },
+  theme: { type: String, default: 'forest' },
 });
 const emit = defineEmits(['select', 'toggle', 'move', 'rename', 'add-child', 'add-sibling', 'remove']);
 
 const renderer = new MapRenderer(new SvgSceneBackend());
 const scene = computed(() =>
-  renderer.render(props.root, { layout: props.layout, selectedId: props.selectedId }),
+  renderer.render(props.root, { layout: props.layout, selectedId: props.selectedId, theme: props.theme }),
 );
+
+// Фон і акценти полотна дає тема; решта стилів іде через CSS-змінні
+const canvasVars = computed(() => {
+  const c = scene.value.canvas;
+  return {
+    '--c-accent': c.accent, '--c-ink': c.ink, '--c-bg': c.background,
+    background: `radial-gradient(circle at 1px 1px, ${c.dot} 1px, transparent 0) 0 0 / 24px 24px, ${c.background}`,
+  };
+});
+const nodeVars = (n) => ({
+  '--n-fill': n.look.fill, '--n-stroke': n.look.stroke, '--n-sw': n.look.strokeWidth,
+  '--n-ink': n.look.textColor, '--n-fs': `${n.look.fontSize}px`, '--n-fw': n.look.fontWeight,
+});
 
 const host = ref(null);
 const size = ref({ width: 800, height: 520 });
@@ -214,7 +228,7 @@ defineExpose({ fit, edit });
 </script>
 
 <template>
-  <div ref="host" class="canvas" data-testid="canvas" tabindex="0" @keydown="onKeydown">
+  <div ref="host" class="canvas" data-testid="canvas" tabindex="0" :style="canvasVars" @keydown="onKeydown">
     <svg
       class="surface"
       role="group"
@@ -231,7 +245,9 @@ defineExpose({ fit, edit });
           :key="e.id"
           class="edge"
           :d="e.d"
-          :stroke-width="Math.max(1.4, 3.2 - e.depth * 0.6)"
+          :stroke="e.look.stroke"
+          :stroke-opacity="e.look.opacity"
+          :stroke-width="e.look.width"
         />
 
         <g
@@ -244,6 +260,7 @@ defineExpose({ fit, edit });
           tabindex="-1"
           :aria-label="n.text || 'без тексту'"
           :aria-pressed="n.selected"
+          :style="nodeVars(n)"
           :data-node-id="n.id"
           @pointerdown="onNodeDown($event, n)"
           @click.stop="onNodeClick(n.id)"
@@ -252,7 +269,17 @@ defineExpose({ fit, edit });
         >
           <title>{{ n.text }}</title>
           <rect :width="n.rect.width" :height="n.rect.height" :rx="n.rect.height / 2" />
-          <text :x="n.rect.width / 2" :y="n.rect.height / 2">{{ n.label }}</text>
+          <text class="label" :x="n.inset + (n.rect.width - n.inset) / 2" :y="n.rect.height / 2">{{ n.label }}</text>
+          <g v-if="n.marks.category" class="mark category" :transform="`translate(${n.inset / 2 + 2} ${n.rect.height / 2})`">
+            <title>{{ n.marks.category.label }}</title>
+            <circle r="9" :fill="n.marks.category.fill" />
+            <text :fill="n.marks.category.ink">{{ n.marks.category.glyph }}</text>
+          </g>
+          <g v-if="n.marks.priority" class="mark priority" transform="translate(6 -2)">
+            <title>{{ n.marks.priority.label }}</title>
+            <circle r="8" :fill="n.marks.priority.fill" />
+            <text :fill="n.marks.priority.ink">{{ n.marks.priority.glyph }}</text>
+          </g>
           <g v-if="n.collapsed" class="badge" :transform="`translate(${n.rect.width - 6} ${-8})`">
             <rect :width="badgeWidth(n.hiddenCount)" height="18" rx="9" />
             <text :x="badgeWidth(n.hiddenCount) / 2" y="9">+{{ n.hiddenCount }}</text>
@@ -296,34 +323,31 @@ defineExpose({ fit, edit });
   border: 1px solid var(--border);
   border-radius: var(--radius);
   overflow: hidden;
-  background:
-    radial-gradient(circle at 1px 1px, rgba(126, 224, 164, 0.1) 1px, transparent 0) 0 0 / 24px 24px,
-    var(--surface);
 }
 .surface { width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; user-select: none; }
 .surface:active { cursor: grabbing; }
 
-.edge { fill: none; stroke: var(--accent); stroke-opacity: 0.45; stroke-linecap: round; }
+.edge { fill: none; stroke-linecap: round; }
 
 .node { cursor: pointer; outline: none; }
-.node rect { fill: var(--surface-2); stroke: var(--border); stroke-width: 1.5; transition: stroke 0.12s, fill 0.12s; }
-.node text { fill: var(--text); font-size: 13px; text-anchor: middle; dominant-baseline: central; pointer-events: none; }
-.node:hover rect, .node:focus-visible rect { stroke: var(--accent); }
-.node.selected rect { stroke: var(--accent); stroke-width: 3; }
-.node.root rect { fill: var(--accent); stroke: var(--accent); }
-.node.root text { fill: var(--accent-ink); font-size: 15px; font-weight: 700; }
+.node rect { fill: var(--n-fill); stroke: var(--n-stroke); stroke-width: var(--n-sw); transition: stroke 0.12s; }
+.node .label { fill: var(--n-ink); font-size: var(--n-fs); font-weight: var(--n-fw); text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+.node:hover rect, .node:focus-visible rect { stroke: var(--c-accent); }
+.mark { pointer-events: none; }
+.mark text { font-size: 11px; font-weight: 700; text-anchor: middle; dominant-baseline: central; }
+.priority text { font-size: 10px; }
 .node.dragging { opacity: 0.75; cursor: grabbing; pointer-events: none; }
-.drop-mark rect { fill: rgba(126, 224, 164, 0.1); stroke: var(--accent); stroke-width: 2; stroke-dasharray: 6 4; }
-.drop-mark line { stroke: var(--accent); stroke-width: 4; stroke-linecap: round; }
+.drop-mark rect { fill: rgba(127, 127, 127, 0.12); stroke: var(--c-accent); stroke-width: 2; stroke-dasharray: 6 4; }
+.drop-mark line { stroke: var(--c-accent); stroke-width: 4; stroke-linecap: round; }
 .node.folded > rect { stroke-dasharray: 5 3; }
 
-.badge rect { fill: var(--bg); stroke: var(--accent); stroke-width: 1.2; stroke-dasharray: none; }
-.badge text { fill: var(--accent); font-size: 12px; font-weight: 700; }
+.badge rect { fill: var(--c-bg); stroke: var(--c-accent); stroke-width: 1.2; stroke-dasharray: none; }
+.badge text { fill: var(--c-accent); font-size: 12px; font-weight: 700; }
 
-.canvas:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.canvas:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
 .editor {
   position: absolute; box-sizing: border-box; padding: 0 14px; text-align: center;
-  background: var(--bg); color: var(--text); border: 2px solid var(--accent); border-radius: 999px; outline: none;
+  background: var(--c-bg); color: var(--c-ink); border: 2px solid var(--c-accent); border-radius: 999px; outline: none;
 }
 .controls { position: absolute; right: 12px; bottom: 12px; display: flex; gap: 6px; }
 </style>

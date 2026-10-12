@@ -4,6 +4,8 @@ import { useRoute } from 'vue-router';
 import MapCanvas from '../components/MapCanvas.vue';
 import NodeItem from '../components/NodeItem.vue';
 import { LAYOUTS, LAYOUT_NAMES } from '../core/layout';
+import { CATEGORIES, PRIORITIES } from '../core/marks';
+import { THEMES, THEME_NAMES } from '../core/theme';
 import { useMapEditorStore } from '../stores/mapEditor';
 
 const route = useRoute();
@@ -68,11 +70,32 @@ function removeSelected(id = store.selectedId) {
         >{{ LAYOUTS[name].label }}</button>
       </div>
 
+      <label class="field">
+        <span class="muted">Тема</span>
+        <select :value="store.theme" aria-label="Тема" @change="run(() => store.setTheme($event.target.value))">
+          <option v-for="name in THEME_NAMES" :key="name" :value="name">{{ THEMES[name].label }}</option>
+        </select>
+      </label>
+
       <span class="muted count">вузлів: {{ store.root?.size() }}</span>
 
       <div class="selection">
         <template v-if="store.selected">
           <span class="muted name">Вибрано: <b>{{ store.selected.text || 'без тексту' }}</b></span>
+          <select
+            :value="store.selected.extra.category ?? ''" aria-label="Категорія"
+            @change="run(() => store.patch(store.selectedId, { category: $event.target.value || null }))"
+          >
+            <option value="">Без категорії</option>
+            <option v-for="c in CATEGORIES" :key="c.key" :value="c.key">{{ c.glyph }} {{ c.label }}</option>
+          </select>
+          <select
+            :value="store.selected.extra.priority ?? ''" aria-label="Терміновість"
+            @change="run(() => store.patch(store.selectedId, { priority: $event.target.value || null }))"
+          >
+            <option value="">Без терміновості</option>
+            <option v-for="p in PRIORITIES" :key="p.key" :value="p.key">{{ p.glyph }} {{ p.label }}</option>
+          </select>
           <button class="btn btn-small" @click="canvas?.edit(store.selectedId)">✎ Текст</button>
           <button class="btn btn-small" @click="addChild()">＋ Вкладений</button>
           <button v-if="!store.selected.isRoot" class="btn btn-small btn-danger" @click="removeSelected()">✕ Видалити</button>
@@ -86,6 +109,7 @@ function removeSelected(id = store.selectedId) {
       ref="canvas"
       :root="store.root"
       :layout="store.layout"
+      :theme="store.theme"
       :selected-id="store.selectedId"
       @select="store.select"
       @toggle="(id) => run(() => store.toggleCollapsed(id))"
@@ -113,8 +137,10 @@ function removeSelected(id = store.selectedId) {
 .seg { display: inline-flex; gap: 4px; }
 .seg .btn.active { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 kbd { font: inherit; font-size: 0.8em; padding: 1px 6px; border: 1px solid var(--border); border-radius: 5px; background: var(--surface-2); }
+.field { display: inline-flex; align-items: center; gap: 6px; font-size: 0.875rem; }
+select { font: inherit; font-size: 0.85rem; padding: 4px 8px; color: var(--text); background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; max-width: 14ch; }
 .count { font-size: 0.875rem; }
-.selection { display: flex; align-items: center; gap: 8px; margin-left: auto; min-width: 0; }
+.selection { flex-wrap: wrap; display: flex; align-items: center; gap: 8px; margin-left: auto; min-width: 0; }
 .name { max-width: 28ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .hint { font-size: 0.85rem; margin: 10px 0 20px; }
 .outline summary { cursor: pointer; font-weight: 600; }

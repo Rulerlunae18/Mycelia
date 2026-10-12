@@ -11,23 +11,27 @@ export const credentialsSchema = z.object({
 });
 
 export const LAYOUTS = ['radial', 'tree', 'bilateral'];
+// Назви тем збігаються з THEME_NAMES клієнта (client/src/core/theme)
+export const THEMES = ['forest', 'paper', 'ocean'];
 
 export const createMapSchema = z.object({
   title: z.string().trim().min(1, 'Назва не може бути порожньою').max(120),
-  theme: z.string().trim().max(32).optional(),
+  theme: z.enum(THEMES).optional(),
   layout: z.enum(LAYOUTS).optional(),
 });
 
 export const updateMapSchema = z
   .object({
     title: z.string().trim().min(1).max(120).optional(),
-    theme: z.string().trim().max(32).optional(),
+    theme: z.enum(THEMES).optional(),
     layout: z.enum(LAYOUTS).optional(),
   })
   .refine((v) => Object.keys(v).length > 0, 'Немає полів для оновлення');
 
 // ---- Вузли ----
 
+// Ключі значків категорій збігаються з CATEGORIES клієнта (client/src/core/marks.js)
+export const CATEGORIES = ['idea', 'task', 'question', 'info', 'risk', 'decision'];
 export const PRIORITIES = ['low', 'normal', 'high', 'urgent'];
 
 const nodeText = z.string().max(2000, 'Текст вузла занадто довгий (максимум 2000 символів)');
@@ -46,7 +50,7 @@ export const updateNodeSchema = z
     text: nodeText.optional(),
     collapsed: z.boolean().optional(),
     style: styleSchema.optional(),
-    category: z.string().trim().min(1).max(32).nullable().optional(),
+    category: z.enum(CATEGORIES).nullable().optional(),
     priority: z.enum(PRIORITIES).nullable().optional(),
   })
   .refine((v) => Object.keys(v).length > 0, 'Немає полів для оновлення');

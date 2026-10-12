@@ -2,12 +2,12 @@
 // Vue-компонент перетворює на <path> і <g>. Так Vue екранує текст сам, а
 // інтерактивність (вибір, подвійний клік) лишається звичайними обробниками подій.
 export class SvgSceneBackend {
-  begin(bounds) {
-    this.scene = { bounds, edges: [], nodes: [] };
+  begin(bounds, canvas) {
+    this.scene = { bounds, canvas, edges: [], nodes: [] };
   }
 
-  drawEdge({ fromId, toId, path, depth }) {
-    this.scene.edges.push({ id: toId, fromId, d: path, depth });
+  drawEdge({ fromId, toId, path, depth, look }) {
+    this.scene.edges.push({ id: toId, fromId, d: path, depth, look });
   }
 
   drawNode(node) {

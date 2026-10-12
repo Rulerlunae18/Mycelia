@@ -54,4 +54,15 @@ describe('MapCanvas', () => {
       expect(html).toContain('<svg');
     }
   });
+
+  it('малює значки категорії і терміновості з підказкою', async () => {
+    const root = new TreeNode({ id: 'r', text: 'Корінь' });
+    root.add(new TreeNode({ id: 'a', text: 'Купити', category: 'task', priority: 'high' }));
+    const html = await render({ root, layout: 'tree', theme: 'ocean' });
+    expect(html).toContain('✓');
+    expect(html).toContain('↑');
+    expect(html).toMatch(/<title[^>]*>Висока<\/title>/);
+    expect(html).toMatch(/<title[^>]*>Задача<\/title>/); // підказка значка категорії
+    expect(html).toMatch(/<title[^>]*>Купити<\/title>/); // підказка вузла
+  });
 });
