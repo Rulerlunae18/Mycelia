@@ -174,4 +174,29 @@ describe('mapEditor store', () => {
     expect(http.patch).toHaveBeenCalledWith('/maps/m1', { title: 'Нова назва' });
     expect(store.map.title).toBe('Нова назва');
   });
+
+  it('створює область з усієї гілки, перейменовує і видаляє її', async () => {
+    http.post.mockResolvedValue({ boundary: { id: 'b1', label: 'Область 1', nodeIds: ['a', 'a1'] } });
+    await store.addBoundaryForBranch('a');
+    expect(http.post).toHaveBeenCalledWith('/maps/m1/boundaries', { label: 'Область 1', nodeIds: ['a', 'a1'] });
+    expect(store.boundaries).toHaveLength(1);
+
+    http.patch.mockResolvedValue({ boundary: { id: 'b1', label: 'Фаза' } });
+    await store.renameBoundary('b1', 'Фаза');
+    expect(store.boundaries[0].label).toBe('Фаза');
+
+    http.delete.mockResolvedValue({});
+    await store.removeBoundary('b1');
+    expect(store.boundaries).toHaveLength(0);
+  });
+
+  it('видалення вузла прибирає його з областей, порожня область зникає', async () => {
+    http.post.mockResolvedValue({ boundary: { id: 'b1', label: 'X', nodeIds: ['a', 'a1'] } });
+    await store.addBoundaryForBranch('a');
+    http.post.mockResolvedValue({ boundary: { id: 'b2', label: 'Y', nodeIds: ['a1'] } });
+    await store.addBoundaryForBranch('a1');
+    http.delete.mockResolvedValue({ deleted: ['a1'], changes: [] });
+    await store.remove('a1');
+    expect(store.boundaries.map((b) => [b.id, b.nodeIds])).toEqual([['b1', ['a']]]);
+  });
 });

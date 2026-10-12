@@ -65,4 +65,12 @@ describe('MapCanvas', () => {
     expect(html).toMatch(/<title[^>]*>Задача<\/title>/); // підказка значка категорії
     expect(html).toMatch(/<title[^>]*>Купити<\/title>/); // підказка вузла
   });
+
+  it('малює область пунктиром з підписом, а текст підпису екранується', async () => {
+    const { root } = sample();
+    const html = await render({ root, layout: 'tree', boundaries: [{ id: 'z', label: '<i>Фаза</i>', nodeIds: ['a', 'a1'] }] });
+    expect(html).toContain('class="boundary"');
+    expect(html).toContain('&lt;i&gt;Фаза');
+    expect(html).not.toContain('<i>Фаза');
+  });
 });

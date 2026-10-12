@@ -10,6 +10,7 @@ import { SvgSceneBackend } from './SvgSceneBackend.js';
 class RecordingBackend {
   calls = [];
   begin(bounds) { this.calls.push(['begin', bounds]); }
+  drawBoundary(b) { this.calls.push(['boundary', b]); }
   drawEdge(e) { this.calls.push(['edge', e]); }
   drawNode(n) { this.calls.push(['node', n]); }
   end() { this.calls.push(['end']); return 'done'; }
@@ -141,5 +142,33 @@ describe('SvgSceneBackend', () => {
     const { root } = sample();
     const scene = new MapRenderer(new SvgSceneBackend()).render(root, { selectedId: 'b' });
     expect(scene.nodes.find((n) => n.id === 'b').look.strokeWidth).toBeGreaterThan(scene.nodes.find((n) => n.id === 'a').look.strokeWidth);
+  });
+
+  it('малює області першими, лише з видимих вузлів, і пропускає порожні', () => {
+    const { root, a } = sample();
+    const backend = new RecordingBackend();
+    new MapRenderer(backend).render(root, {
+      boundaries: [
+        { id: 'b1', label: 'Фаза', nodeIds: ['a', 'a1', 'a2'] },
+        { id: 'b2', label: 'Зникла', nodeIds: ['немає'] },
+      ],
+    });
+    const kinds = backend.calls.map((c) => c[0]);
+    expect(kinds.filter((k) => k === 'boundary')).toHaveLength(1);
+    expect(kinds.indexOf('boundary')).toBeLessThan(kinds.indexOf('edge'));
+    expect(backend.calls.find((c) => c[0] === 'boundary')[1]).toMatchObject({ id: 'b1', label: 'Фаза', index: 0 });
+
+    // згорнули гілку: область лишається, але лише навколо видимого вузла
+    a.collapsed = true;
+    const folded = new MapRenderer(new SvgSceneBackend()).render(root, { boundaries: [{ id: 'b1', label: '', nodeIds: ['a1', 'a2'] }] });
+    expect(folded.boundaries).toHaveLength(0);
+  });
+
+  it('сусідні області отримують різні кольори від фабрики теми', () => {
+    const { root } = sample();
+    const scene = new MapRenderer(new SvgSceneBackend()).render(root, {
+      boundaries: [{ id: '1', nodeIds: ['a'] }, { id: '2', nodeIds: ['b'] }],
+    });
+    expect(scene.boundaries[0].look.stroke).not.toBe(scene.boundaries[1].look.stroke);
   });
 });

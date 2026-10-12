@@ -19,6 +19,9 @@ export class ThemeFactory {
   /** kind: 'category' | 'priority'; @returns {import('./products').MarkStyle} */
   createMarkStyle(/* kind, key */) { return abstract('createMarkStyle'); }
 
+  /** index: порядковий номер області, щоб сусідні мали різні кольори; @returns {import('./products').BoundaryStyle} */
+  createBoundaryStyle(/* index */) { return abstract('createBoundaryStyle'); }
+
   /** @returns {import('./products').CanvasStyle} */
   createCanvasStyle() { return abstract('createCanvasStyle'); }
 }

@@ -129,6 +129,7 @@ function removeSelected(id = store.selectedId) {
             <option v-for="p in PRIORITIES" :key="p.key" :value="p.key">{{ p.glyph }} {{ p.label }}</option>
           </select>
           <button class="btn btn-small" @click="canvas?.edit(store.selectedId)">✎ Текст</button>
+          <button class="btn btn-small" title="Пунктирна область навколо вузла і всієї його гілки" @click="run(() => store.addBoundaryForBranch(store.selectedId))">▢ Обвести гілку</button>
           <button class="btn btn-small" @click="addChild()">＋ Вкладений</button>
           <button v-if="!store.selected.isRoot" class="btn btn-small btn-danger" @click="removeSelected()">✕ Видалити</button>
         </template>
@@ -141,7 +142,8 @@ function removeSelected(id = store.selectedId) {
       ref="canvas"
       :root="store.root"
       :layout="store.layout"
-      :theme="store.theme"
+:theme="store.theme"
+      :boundaries="store.boundaries"
       :selected-id="store.selectedId"
       @select="store.select"
       @toggle="(id) => run(() => store.toggleCollapsed(id))"
@@ -155,6 +157,24 @@ function removeSelected(id = store.selectedId) {
       Колесо миші: масштаб · перетягни фон, щоб посунути карту · подвійний клік по вузлу згортає і розгортає гілку · тягни вузол на середину іншого, щоб зробити його дитиною, або на край, щоб змінити порядок.
       <br />Клавіші: <kbd>Tab</kbd> вкладений · <kbd>Enter</kbd> сусід · <kbd>F2</kbd> текст · <kbd>Delete</kbd> видалити · <kbd>Esc</kbd> зняти виділення.
     </p>
+
+    <details v-if="store.boundaries.length" class="card outline" open>
+      <summary>Області ({{ store.boundaries.length }})</summary>
+      <ul class="areas">
+        <li v-for="b in store.boundaries" :key="b.id">
+          <input
+            :value="b.label"
+            class="area-name"
+            maxlength="120"
+            aria-label="Назва області"
+            placeholder="Без назви"
+            @change="run(() => store.renameBoundary(b.id, $event.target.value))"
+          />
+          <span class="muted">вузлів: {{ b.nodeIds.length }}</span>
+          <button class="btn btn-small btn-danger" :aria-label="`Видалити область ${b.label}`" @click="run(() => store.removeBoundary(b.id))">✕</button>
+        </li>
+      </ul>
+    </details>
 
     <details class="card outline">
       <summary>Структура: змінити текст вузлів</summary>
@@ -171,6 +191,9 @@ function removeSelected(id = store.selectedId) {
 kbd { font: inherit; font-size: 0.8em; padding: 1px 6px; border: 1px solid var(--border); border-radius: 5px; background: var(--surface-2); }
 .field { display: inline-flex; align-items: center; gap: 6px; font-size: 0.875rem; }
 select { font: inherit; font-size: 0.85rem; padding: 4px 8px; color: var(--text); background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; max-width: 14ch; }
+.areas { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 8px; }
+.areas li { display: flex; align-items: center; gap: 10px; }
+.area-name { flex: 1; max-width: 360px; }
 .count { font-size: 0.875rem; }
 .selection { flex-wrap: wrap; display: flex; align-items: center; gap: 8px; margin-left: auto; min-width: 0; }
 .name { max-width: 28ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

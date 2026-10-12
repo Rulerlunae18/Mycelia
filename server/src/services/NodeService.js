@@ -6,9 +6,10 @@ export const MAX_NODES_PER_MAP = 2000;
 // Сервіс (SOA): вузли карти. Усі операції спершу перевіряють, що карта
 // належить користувачеві, і вже потім працюють із деревом.
 export class NodeService {
-  constructor({ mapRepository, nodeRepository }) {
+  constructor({ mapRepository, nodeRepository, boundaryService = null }) {
     this.maps = mapRepository;
     this.nodes = nodeRepository;
+    this.boundaryService = boundaryService; // чистить області від видалених вузлів
   }
 
   async #load(ownerId, mapId) {
@@ -91,6 +92,7 @@ export class NodeService {
       .filter((id) => id !== nodeId);
     const changes = reindex(siblings, node.parentId);
     await this.nodes.saveOrder(changes);
+    await this.boundaryService?.forgetNodes(mapId, deleted);
     await this.maps.touch(mapId);
     return { deleted, changes };
   }

@@ -37,6 +37,7 @@ export class FakeMapRepository {
       createdAt: new Date(),
       updatedAt: new Date(),
       nodes: [newNode({ mapId: id, parentId: null, text: title, order: 0 })],
+      boundaries: [],
     };
     this.maps.push(map);
     return map;
@@ -125,5 +126,40 @@ export class FakeNodeRepository {
     for (const map of this.mapRepository.maps) {
       map.nodes = map.nodes.filter((n) => !ids.includes(n.id));
     }
+  }
+}
+
+export class FakeBoundaryRepository {
+  constructor(mapRepository) {
+    this.mapRepository = mapRepository;
+  }
+
+  #all() {
+    return this.mapRepository.maps.flatMap((m) => m.boundaries);
+  }
+
+  async findByMap(mapId) {
+    return this.mapRepository.maps.find((m) => m.id === mapId).boundaries.map((b) => ({ ...b }));
+  }
+
+  async findById(id) {
+    const b = this.#all().find((x) => x.id === id);
+    return b ? { ...b } : null;
+  }
+
+  async create({ mapId, label, nodeIds }) {
+    const boundary = { id: randomUUID(), mapId, label, nodeIds };
+    this.mapRepository.maps.find((m) => m.id === mapId).boundaries.push(boundary);
+    return { ...boundary };
+  }
+
+  async update(id, data) {
+    const b = this.#all().find((x) => x.id === id);
+    Object.assign(b, data);
+    return { ...b };
+  }
+
+  async delete(id) {
+    for (const map of this.mapRepository.maps) map.boundaries = map.boundaries.filter((b) => b.id !== id);
   }
 }
