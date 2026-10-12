@@ -2,8 +2,10 @@
 import { onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { http } from '../api/http';
+import { useTabsStore } from '../stores/tabs';
 
 const router = useRouter();
+const tabs = useTabsStore();
 const maps = ref([]);
 const title = ref('');
 const loading = ref(true);
@@ -35,6 +37,7 @@ async function remove(map) {
   try {
     await http.delete(`/maps/${map.id}`);
     maps.value = maps.value.filter((m) => m.id !== map.id);
+    tabs.close(map.id);
   } catch (err) {
     error.value = err.message;
   }
