@@ -20,12 +20,17 @@ export const useMapEditorStore = defineStore('mapEditor', () => {
   const selected = computed(() => (selectedId.value && root.value ? root.value.find(selectedId.value) : null));
   const base = () => `/maps/${map.value.id}/nodes`;
 
+  let loadToken = 0;
+
   async function load(mapId) {
+    const token = ++loadToken;
     error.value = '';
     map.value = null;
     nodes.value = [];
     selectedId.value = null;
     const { map: loaded } = await http.get(`/maps/${mapId}`);
+    // Користувач міг уже перейти на іншу вкладку: пізня відповідь не має перезаписати нову карту
+    if (token !== loadToken) return;
     const { nodes: rows, ...rest } = loaded;
     map.value = rest;
     nodes.value = rows;
@@ -88,6 +93,11 @@ export const useMapEditorStore = defineStore('mapEditor', () => {
     }
   }
 
+  async function renameMap(title) {
+    const { map: updated } = await http.patch(`/maps/${map.value.id}`, { title });
+    map.value.title = updated.title;
+  }
+
   async function setTheme(name) {
     const previous = map.value.theme;
     if (previous === name) return;
@@ -135,6 +145,6 @@ export const useMapEditorStore = defineStore('mapEditor', () => {
 
   return {
     map, nodes, error, selectedId, root, layout, theme, selected,
-    load, select, addChild, addChildAndSelect, addSiblingAndSelect, setLayout, setTheme, patch, rename, toggleCollapsed, move, moveAndReveal, remove,
+    load, select, addChild, addChildAndSelect, addSiblingAndSelect, setLayout, setTheme, renameMap, patch, rename, toggleCollapsed, move, moveAndReveal, remove,
   };
 });

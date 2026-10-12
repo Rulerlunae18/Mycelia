@@ -1,25 +1,57 @@
 <script setup>
-import { nextTick, onMounted, ref } from 'vue';
-import { useRoute } from 'vue-router';
+import { nextTick, onMounted, ref, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import { ApiError } from '../api/http';
 import MapCanvas from '../components/MapCanvas.vue';
+import MapTabs from '../components/MapTabs.vue';
 import NodeItem from '../components/NodeItem.vue';
 import { LAYOUTS, LAYOUT_NAMES } from '../core/layout';
 import { CATEGORIES, PRIORITIES } from '../core/marks';
 import { THEMES, THEME_NAMES } from '../core/theme';
 import { useMapEditorStore } from '../stores/mapEditor';
+import { useTabsStore } from '../stores/tabs';
 
 const route = useRoute();
+const router = useRouter();
 const store = useMapEditorStore();
+const tabs = useTabsStore();
 const error = ref('');
 const canvas = ref(null);
 
-onMounted(async () => {
+async function openMap(id) {
+  error.value = '';
+  tabs.ensureLoaded();
   try {
-    await store.load(route.params.id);
+    await store.load(id);
+    if (store.map?.id === id) tabs.open(id, store.map.title);
   } catch (err) {
-    error.value = err.message;
+    // Карту видалили або вона чужа: вкладка марна, переходимо до сусідньої
+    if (id !== route.params.id) return; // запізніла відповідь про вкладку, яку вже залишили
+    if (err instanceof ApiError && err.status === 404) {
+      const next = tabs.close(id);
+      router.replace(next ? { name: 'editor', params: { id: next } } : { name: 'maps' });
+    } else {
+      error.value = err.message;
+    }
   }
-});
+}
+
+onMounted(() => openMap(route.params.id));
+// Той самий компонент показує різні карти: перемикання вкладки міняє лише адресу
+watch(() => route.params.id, (id) => id && openMap(id));
+
+function closeTab(id) {
+  const next = tabs.close(id);
+  if (id !== route.params.id) return;
+  router.push(next ? { name: 'editor', params: { id: next } } : { name: 'maps' });
+}
+
+function renameTab({ id, title }) {
+  run(async () => {
+    await store.renameMap(title);
+    tabs.setTitle(id, title);
+  });
+}
 
 async function run(action) {
   error.value = '';
@@ -52,7 +84,7 @@ function removeSelected(id = store.selectedId) {
 </script>
 
 <template>
-  <RouterLink to="/maps" class="muted">← До списку карт</RouterLink>
+  <MapTabs :tabs="tabs.tabs" :active-id="route.params.id" @close="closeTab" @rename="renameTab" />
   <p v-if="error" class="error" role="alert">{{ error }}</p>
 
   <template v-if="store.map">

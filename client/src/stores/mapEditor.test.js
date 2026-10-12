@@ -155,4 +155,23 @@ describe('mapEditor store', () => {
     await store.addSiblingAndSelect('r');
     expect(store.root.find('n').parent.id).toBe('r');
   });
+
+  it('запізніла відповідь про іншу карту не перезаписує поточну', async () => {
+    let releaseSlow;
+    http.get.mockImplementationOnce(() => new Promise((res) => { releaseSlow = () => res({ map: { id: 'slow', title: 'Повільна', layout: 'tree', nodes: [row('s', null, 'S')] } }); }));
+    http.get.mockResolvedValueOnce({ map: { id: 'fast', title: 'Швидка', layout: 'tree', nodes: [row('f', null, 'F')] } });
+    const slow = store.load('slow');
+    await store.load('fast');
+    releaseSlow();
+    await slow;
+    expect(store.map.id).toBe('fast');
+    expect(store.root.id).toBe('f');
+  });
+
+  it('перейменовує карту', async () => {
+    http.patch.mockResolvedValue({ map: { id: 'm1', title: 'Нова назва' } });
+    await store.renameMap('Нова назва');
+    expect(http.patch).toHaveBeenCalledWith('/maps/m1', { title: 'Нова назва' });
+    expect(store.map.title).toBe('Нова назва');
+  });
 });
