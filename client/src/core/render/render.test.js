@@ -112,4 +112,34 @@ describe('SvgSceneBackend', () => {
     const second = renderer.render(new TreeNode({ id: 'x', text: 'Один' }));
     expect(second.nodes).toHaveLength(1);
   });
+
+  it('вузлу з категорією і терміновістю дає значки зі стилем з теми й місце під значок', () => {
+    const { root } = sample();
+    const scene = new MapRenderer(new SvgSceneBackend()).render(root, { theme: 'paper' });
+    const a = scene.nodes.find((n) => n.id === 'a');
+    const b = scene.nodes.find((n) => n.id === 'b');
+    expect(a.marks.category).toMatchObject({ key: 'idea', glyph: '★' });
+    expect(a.marks.priority).toMatchObject({ key: 'urgent', glyph: '!' });
+    expect(a.marks.category.ink).toMatch(/^#/);
+    expect(a.inset).toBeGreaterThan(0);
+    expect(b.marks).toEqual({ category: null, priority: null });
+    expect(b.inset).toBe(0);
+    expect(scene.canvas.background).toBe('#f6f1e7');
+  });
+
+  it('тема змінює вигляд, а не розкладку: прямокутники ті самі', () => {
+    const { root } = sample();
+    const r = new MapRenderer(new SvgSceneBackend());
+    const forest = r.render(root, { theme: 'forest' });
+    const ocean = r.render(root, { theme: 'ocean' });
+    expect(ocean.nodes.map((n) => n.rect)).toEqual(forest.nodes.map((n) => n.rect));
+    expect(ocean.nodes[0].look.fill).not.toBe(forest.nodes[0].look.fill);
+    expect(ocean.edges[0].look.stroke).not.toBe('');
+  });
+
+  it('виділений вузол отримує товстішу рамку', () => {
+    const { root } = sample();
+    const scene = new MapRenderer(new SvgSceneBackend()).render(root, { selectedId: 'b' });
+    expect(scene.nodes.find((n) => n.id === 'b').look.strokeWidth).toBeGreaterThan(scene.nodes.find((n) => n.id === 'a').look.strokeWidth);
+  });
 });

@@ -4,10 +4,11 @@
 //
 // Контракт бекенду (виклики йдуть у такому порядку: begin -> drawEdge* -> drawNode* -> end):
 //
-//   begin(bounds)   bounds = { width, height } повного полотна
-//   drawEdge(edge)  edge = { fromId, toId, path, depth }  path = SVG-шлях кривої
+//   begin(bounds, canvas)  bounds = { width, height } повного полотна, canvas = CanvasStyle теми
+//   drawEdge(edge)  edge = { fromId, toId, path, depth, look }  path = SVG-шлях кривої, look = EdgeStyle
 //   drawNode(node)  node = { id, rect, text, label, depth, isRoot, collapsed,
-//                            hiddenCount, selected, category, priority, style }
+//                            hiddenCount, selected, category, priority, style,
+//                            look (NodeStyle), inset, marks: { category, priority } }
 //   end()           повертає результат малювання (сцену, зображення тощо)
 
 export const BACKEND_METHODS = ['begin', 'drawEdge', 'drawNode', 'end'];

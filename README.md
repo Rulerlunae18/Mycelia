@@ -16,6 +16,8 @@ mycelia/
 │       │   ├── TreeNode.js    Composite
 │       │   ├── layout/        Strategy: radial, tree, bilateral + LayoutContext
 │       │   ├── render/        Bridge: MapRenderer + RenderBackend (SvgSceneBackend)
+│       │   ├── theme/         Abstract Factory: ThemeFactory + теми forest, paper, ocean
+│       │   ├── marks.js       каталог значків категорій і терміновості
 │       │   ├── geometry.js    криві між вузлами
 │       │   └── viewport.js    зум, панорама, «вписати»
 │       ├── api/               fetch-обгортка (cookie, обробка помилок)
@@ -74,10 +76,10 @@ npm run dev:client      # http://localhost:5173
 | GET | `/api/maps` | список карт користувача |
 | POST | `/api/maps` | `{ title, theme?, layout? }` → карта з кореневим вузлом |
 | GET | `/api/maps/:id` | карта з вузлами, вкладеннями й областями |
-| PATCH | `/api/maps/:id` | зміна назви, теми, розкладки |
+| PATCH | `/api/maps/:id` | зміна назви, теми (forest / paper / ocean), розкладки |
 | DELETE | `/api/maps/:id` | видалення |
 | POST | `/api/maps/:id/nodes` | `{ parentId, text?, index? }` → новий вузол (index — позиція серед сусідів) |
-| PATCH | `/api/maps/:id/nodes/:nodeId` | `text`, `collapsed`, `style`, `category`, `priority` (low / normal / high / urgent або null) |
+| PATCH | `/api/maps/:id/nodes/:nodeId` | `text`, `collapsed`, `style`, `category` (idea / task / question / info / risk / decision або null), `priority` (low / normal / high / urgent або null) |
 | POST | `/api/maps/:id/nodes/:nodeId/move` | `{ parentId, index? }` → список змінених позицій `{ id, parentId, order }` |
 | DELETE | `/api/maps/:id/nodes/:nodeId` | видаляє вузол з піддеревом, повертає `{ deleted, changes }` |
 
@@ -124,7 +126,7 @@ npm run dev:client      # http://localhost:5173
 | Bridge | `client/src/core/render/`: `MapRenderer` не знає, чим малює; зараз бекенд `SvgSceneBackend`, Canvas можна додати без змін у рендерері (готово) |
 | SOA | `server/src/services/*` (AuthService, MapService, NodeService готові) |
 | Prototype | клонування гілки, створення карти з `Template` |
-| Abstract Factory | родини об'єктів за темою: вузол, зв'язок, стиль |
+| Abstract Factory | `client/src/core/theme/`: `ThemeFactory` створює узгоджену родину продуктів (стиль вузла, лінії, значка, полотна); конкретні фабрики Ліс, Папір, Океан (готово) |
 
 ## Розкладки
 
@@ -140,10 +142,19 @@ npm run dev:client      # http://localhost:5173
 
 Гарячі клавіші (полотно має фокус після кліку по вузлу): `Tab` додає дитину, `Enter` сусіда після вузла, `F2` змінює текст, `Delete` видаляє (з підтвердженням), `Esc` знімає виділення. Новий вузол одразу відкривається для правки; під час правки `Enter` зберігає, `Esc` скасовує.
 
+## Значки і теми
+
+Категорії (ідея, задача, питання, інформація, ризик, рішення) малюються кружком із символом
+зліва від тексту й розширюють вузол; терміновість (низька, звичайна, висока, термінова)
+кружком на верхньому куті. Вибір у панелі над картою, коли вузол вибрано. Тема карти
+зберігається в `maps.theme`; теми різняться лише виглядом, розкладка та сама. Тест перевіряє
+контраст тексту (≥ 4.5) на вузлах і значках у кожній темі.
+
 ## Що далі
 
 1. ~~Редагування вузлів~~ (готово: API, сховище `mapEditor`, правка в списку).
 2. ~~Полотно на SVG, розкладки (Strategy), автоматичні лінії~~ (готово).
+2a. ~~Значки категорій і терміновості, теми (Abstract Factory)~~ (готово).
 3. ~~Перетягування вузлів мишею~~ (готово). Правка тексту на полотні і гарячі клавіші теж готові.
 4. Undo/redo, вкладки карт.
 5. Вкладення (`FileService` + Supabase Storage), значки категорій і терміновості, області.

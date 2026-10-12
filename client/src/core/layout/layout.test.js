@@ -202,3 +202,15 @@ describe('підпис вузла', () => {
     }
   });
 });
+
+describe('значок категорії і розмір вузла', () => {
+  it('значок категорії розширює вузол на своє місце, а підпис при цьому не губиться', async () => {
+    const { TreeNode } = await import('../TreeNode.js');
+    const { measureNode, labelFor } = await import('./measure.js');
+    const { CATEGORY_INSET } = await import('../marks.js');
+    const plain = new TreeNode({ id: 'p', text: 'Дванадцять!' });
+    const marked = new TreeNode({ id: 'm', text: 'Дванадцять!', category: 'idea' });
+    expect(measureNode(marked).width - measureNode(plain).width).toBe(CATEGORY_INSET);
+    expect(labelFor(marked, measureNode(marked).width)).toBe('Дванадцять!');
+  });
+});

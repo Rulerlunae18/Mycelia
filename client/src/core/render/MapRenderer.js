@@ -1,5 +1,7 @@
 import { edgePath } from '../geometry.js';
 import { LayoutContext } from '../layout/index.js';
+import { CATEGORY_INSET, findCategory, findPriority } from '../marks.js';
+import { getTheme } from '../theme/index.js';
 import { labelFor } from '../layout/measure.js';
 import { visibleNodes } from '../layout/shared.js';
 import { assertBackend } from './RenderBackend.js';
@@ -18,14 +20,16 @@ export class MapRenderer {
     return this;
   }
 
-  // layout: назва розкладки (необов'язково), selectedId: виділений вузол
-  render(root, { layout, selectedId = null } = {}) {
+  // layout: назва розкладки, selectedId: виділений вузол, theme: назва теми
+  // (стилі дає фабрика теми, Abstract Factory)
+  render(root, { layout, selectedId = null, theme } = {}) {
     if (layout) this.layout.use(layout);
+    const factory = getTheme(theme);
     const { rects, bounds } = this.layout.compute(root);
     const backend = this.backend;
     const nodes = [...visibleNodes(root)];
 
-    backend.begin(bounds);
+    backend.begin(bounds, factory.createCanvasStyle());
 
     // Лінії малюємо першими, щоб вузли лягали поверх них
     for (const node of nodes) {
@@ -35,12 +39,15 @@ export class MapRenderer {
         toId: node.id,
         path: edgePath(rects.get(node.parent.id), rects.get(node.id)),
         depth: node.depth,
+        look: factory.createEdgeStyle(node.depth),
       });
     }
 
     for (const node of nodes) {
       const rect = rects.get(node.id);
       const folded = node.collapsed && !node.isLeaf;
+      const category = findCategory(node.extra.category);
+      const priority = findPriority(node.extra.priority);
       backend.drawNode({
         id: node.id,
         rect,
@@ -54,6 +61,12 @@ export class MapRenderer {
         category: node.extra.category ?? null,
         priority: node.extra.priority ?? null,
         style: node.extra.style ?? null,
+        look: factory.createNodeStyle({ isRoot: node.isRoot, selected: node.id === selectedId }),
+        inset: category ? CATEGORY_INSET : 0,
+        marks: {
+          category: category && { ...category, ...factory.createMarkStyle('category', category.key) },
+          priority: priority && { ...priority, ...factory.createMarkStyle('priority', priority.key) },
+        },
       });
     }
 

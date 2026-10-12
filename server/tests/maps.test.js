@@ -40,6 +40,18 @@ describe('карти', () => {
     expect(custom.body.map.layout).toBe('tree');
   });
 
+  it('нова карта отримує тему «forest», тема перевіряється за списком', async () => {
+    const agent = await loggedInAgent(app, 'a@example.com');
+    const plain = await agent.post('/api/maps').send({ title: 'Звичайна' });
+    expect(plain.body.map.theme).toBe('forest');
+    const paper = await agent.post('/api/maps').send({ title: 'Папір', theme: 'paper' });
+    expect(paper.body.map.theme).toBe('paper');
+    await agent.post('/api/maps').send({ title: 'x', theme: 'neon' }).expect(400);
+    const patched = await agent.patch(`/api/maps/${plain.body.map.id}`).send({ theme: 'ocean' });
+    expect(patched.body.map.theme).toBe('ocean');
+    await agent.patch(`/api/maps/${plain.body.map.id}`).send({ theme: 'neon' }).expect(400);
+  });
+
   it('перевіряє дані: порожня назва і невідома розкладка дають 400', async () => {
     const agent = await loggedInAgent(app, 'a@example.com');
     await agent.post('/api/maps').send({ title: '   ' }).expect(400);

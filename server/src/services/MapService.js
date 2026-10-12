@@ -3,6 +3,7 @@ import { notFound } from '../errors.js';
 // Розкладка нової карти, якщо користувач не вибрав її сам. Задаємо тут, а не в
 // schema.prisma, щоб зміна не вимагала міграції; збігається з DEFAULT_LAYOUT клієнта.
 export const DEFAULT_LAYOUT = 'bilateral';
+export const DEFAULT_THEME = 'forest';
 
 // Сервіс (SOA): карти користувача. Чужа карта для користувача
 // виглядає так само, як неіснуюча (404), щоб не розкривати чужі id.
@@ -17,7 +18,7 @@ export class MapService {
 
   // Нова карта завжди створюється разом із кореневим вузлом.
   create(ownerId, { title, theme, layout }) {
-    return this.maps.createWithRoot({ ownerId, title, theme, layout: layout ?? DEFAULT_LAYOUT });
+    return this.maps.createWithRoot({ ownerId, title, theme: theme ?? DEFAULT_THEME, layout: layout ?? DEFAULT_LAYOUT });
   }
 
   async get(ownerId, id) {
