@@ -14,7 +14,7 @@ import { nodeRoutes } from './routes/nodes.routes.js';
 
 // Фабрика застосунку: сервіси приходять ззовні (dependency injection).
 // У server.js вони працюють із Prisma, у тестах із фейковими репозиторіями.
-export function createApp({ authService, mapService, nodeService, boundaryService, attachmentService }) {
+export function createApp({ authService, mapService, nodeService, boundaryService, attachmentService, templateService }) {
   const app = express();
 
   // Render стоїть за проксі: потрібно для rate limit і Secure-cookie
@@ -45,7 +45,8 @@ export function createApp({ authService, mapService, nodeService, boundaryServic
 
   app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
   app.use('/api/auth', authLimiter, authRoutes({ authService, requireAuth, cookieOptions }));
-  app.use('/api/maps', mapRoutes({ mapService, requireAuth }));
+  app.get('/api/templates', requireAuth, (_req, res) => res.json({ templates: templateService.list() }));
+  app.use('/api/maps', mapRoutes({ mapService, templateService, requireAuth }));
   app.use('/api/maps/:mapId/nodes', nodeRoutes({ nodeService, requireAuth }));
 
   app.use('/api/maps/:mapId/boundaries', boundaryRoutes({ boundaryService, requireAuth }));

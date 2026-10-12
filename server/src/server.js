@@ -6,11 +6,13 @@ import { BoundaryRepository } from './repositories/BoundaryRepository.js';
 import { MapRepository } from './repositories/MapRepository.js';
 import { NodeRepository } from './repositories/NodeRepository.js';
 import { UserRepository } from './repositories/UserRepository.js';
+import { buildTemplateRegistry } from './domain/templates.js';
 import { AttachmentService } from './services/AttachmentService.js';
 import { AuthService } from './services/AuthService.js';
 import { BoundaryService } from './services/BoundaryService.js';
 import { MapService } from './services/MapService.js';
 import { NodeService } from './services/NodeService.js';
+import { TemplateService } from './services/TemplateService.js';
 import { LocalDiskStorage } from './storage/LocalDiskStorage.js';
 
 // Точка складання: репозиторії -> сервіси -> HTTP-застосунок.
@@ -29,6 +31,7 @@ const attachmentService = new AttachmentService({
   storage: new LocalDiskStorage(config.uploadDir),
 });
 const mapService = new MapService({ mapRepository, attachmentService });
+const templateService = new TemplateService({ mapRepository, nodeRepository, registry: buildTemplateRegistry() });
 const boundaryService = new BoundaryService({
   mapRepository,
   nodeRepository,
@@ -36,7 +39,7 @@ const boundaryService = new BoundaryService({
 });
 const nodeService = new NodeService({ mapRepository, nodeRepository, boundaryService, attachmentService });
 
-const app = createApp({ authService, mapService, nodeService, boundaryService, attachmentService });
+const app = createApp({ authService, mapService, nodeService, boundaryService, attachmentService, templateService });
 const server = app.listen(config.port, () => {
   console.log(`Mycelia API: http://localhost:${config.port}`);
 });

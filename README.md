@@ -74,13 +74,15 @@ npm run dev:client      # http://localhost:5173
 | POST | `/api/auth/logout` | очищає cookie |
 | GET | `/api/auth/me` | поточний користувач |
 | GET | `/api/maps` | список карт користувача |
-| POST | `/api/maps` | `{ title, theme?, layout? }` → карта з кореневим вузлом |
+| POST | `/api/maps` | `{ title, theme?, layout?, template? }` → карта з кореневим вузлом (з `template` ще й гілки зі зразка) |
 | GET | `/api/maps/:id` | карта з вузлами, вкладеннями й областями |
 | PATCH | `/api/maps/:id` | зміна назви, теми (forest / paper / ocean), розкладки |
 | DELETE | `/api/maps/:id` | видалення |
 | POST | `/api/maps/:id/nodes` | `{ parentId, text?, index? }` → новий вузол (index — позиція серед сусідів) |
 | PATCH | `/api/maps/:id/nodes/:nodeId` | `text`, `collapsed`, `style`, `category` (idea / task / question / info / risk / decision або null), `priority` (low / normal / high / urgent або null) |
 | POST | `/api/maps/:id/nodes/:nodeId/move` | `{ parentId, index? }` → список змінених позицій `{ id, parentId, order }` |
+| GET | `/api/templates` | список шаблонів карт: `{ key, title, description, nodes }` |
+| POST | `/api/maps/:id/nodes/:nodeId/duplicate` | копія гілки з усіма вкладеними одразу після оригіналу → `{ nodes, changes }` |
 | POST | `/api/maps/:id/nodes/:nodeId/attachments?name=&mime=` | тіло: сирі байти файлу (до 25 МБ, до 10 на вузол, до 100 на карту) → опис вкладення |
 | GET | `/api/maps/:id/attachments/:aid/file` | сам файл (картинки й відео inline, підтримується Range; решта лише для завантаження) |
 | DELETE | `/api/maps/:id/attachments/:aid` | видаляє вкладення і файл |
@@ -131,7 +133,7 @@ npm run dev:client      # http://localhost:5173
 | Strategy | `client/src/core/layout/`: три розкладки, `LayoutContext` міняє їх на льоту (готово); формати експорту ще попереду |
 | Bridge | `client/src/core/render/`: `MapRenderer` не знає, чим малює; зараз бекенд `SvgSceneBackend`, Canvas можна додати без змін у рендерері (готово) |
 | SOA | `server/src/services/*` (AuthService, MapService, NodeService готові) |
-| Prototype | клонування гілки, створення карти з `Template` |
+| Prototype | `server/src/domain/prototype.js`: `NodePrototype.clone()` робить глибоку незалежну копію гілки; нею користуються «дублювати гілку» (прототип з наявної гілки) і карта з шаблону (`TemplateRegistry` віддає копію зразка) (готово) |
 | Abstract Factory | `client/src/core/theme/`: `ThemeFactory` створює узгоджену родину продуктів (стиль вузла, лінії, значка, полотна); конкретні фабрики Ліс, Папір, Океан (готово) |
 
 ## Розкладки
@@ -193,10 +195,21 @@ npm run dev:client      # http://localhost:5173
 (`server/src/storage/`), тож перехід на Supabase Storage означає ще один клас того ж інтерфейсу.
 На Render диск тимчасовий, тому до деплою сховище треба перенести (див. «Деплой»).
 
+## Prototype: дублювання і шаблони
+
+«⧉ Дублювати гілку» (вибраний вузол, не корінь) створює копію вузла з усіма вкладеними одразу після
+нього, з приміткою «(копія)». Вкладення й області не копіюються, щоб не розмножувати файли.
+При створенні карти можна вибрати шаблон: проєкт, SWOT, мозковий штурм, план тижня, курсова.
+Усе це одна механіка: `NodePrototype` вміє `clone()` (глибока копія, нові id при записі), тому зразок
+шаблону ніхто не псує, а дві карти з одного шаблону повністю незалежні. Шаблони зараз вбудовані в
+код (`server/src/domain/templates.js`); таблиця `Template` у схемі лишилась для можливих
+користувацьких шаблонів, але поки не використовується.
+
 ## Що далі
 
 1. ~~Редагування вузлів~~ (готово: API, сховище `mapEditor`, правка в списку).
 2. ~~Полотно на SVG, розкладки (Strategy), автоматичні лінії~~ (готово).
+2e. ~~Prototype: дублювання гілки, шаблони карт~~ (готово).
 2d. ~~Вкладення (локально)~~ (готово).
 2c. ~~Області пунктиром~~ (готово).
 2b. ~~Вкладки карт~~ (готово).

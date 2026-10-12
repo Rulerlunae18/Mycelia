@@ -140,6 +140,7 @@ function removeSelected(id = store.selectedId) {
             <option v-for="p in PRIORITIES" :key="p.key" :value="p.key">{{ p.glyph }} {{ p.label }}</option>
           </select>
           <button class="btn btn-small" @click="canvas?.edit(store.selectedId)">✎ Текст</button>
+          <button v-if="!store.selected.isRoot" class="btn btn-small" title="Копія вузла з усіма вкладеними, одразу після нього" @click="run(() => store.duplicate(store.selectedId))">⧉ Дублювати гілку</button>
           <button class="btn btn-small" title="Пунктирна область навколо вузла і всієї його гілки" @click="run(() => store.addBoundaryForBranch(store.selectedId))">▢ Обвести гілку</button>
           <button class="btn btn-small" @click="addChild()">＋ Вкладений</button>
           <button v-if="!store.selected.isRoot" class="btn btn-small btn-danger" @click="removeSelected()">✕ Видалити</button>

@@ -115,6 +115,12 @@ export class FakeNodeRepository {
     return this.#map(mapId).nodes.map((n) => ({ ...n }));
   }
 
+  async createMany(rows) {
+    const full = rows.map((r) => ({ ...newNode(r), ...r }));
+    this.#map(rows[0].mapId).nodes.push(...full);
+    return full.map((n) => ({ ...n, attachments: [] }));
+  }
+
   async create({ mapId, parentId, text, order }) {
     const node = newNode({ mapId, parentId, text, order });
     this.#map(mapId).nodes.push(node);

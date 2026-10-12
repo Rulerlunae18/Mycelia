@@ -1,5 +1,7 @@
 import { createApp } from '../../src/app.js';
 import { AuthService } from '../../src/services/AuthService.js';
+import { buildTemplateRegistry } from '../../src/domain/templates.js';
+import { TemplateService } from '../../src/services/TemplateService.js';
 import { AttachmentService } from '../../src/services/AttachmentService.js';
 import { BoundaryService } from '../../src/services/BoundaryService.js';
 import { MapService } from '../../src/services/MapService.js';
@@ -26,7 +28,8 @@ export function makeTestApp() {
     boundaryRepository: new FakeBoundaryRepository(mapRepository),
   });
   const nodeService = new NodeService({ mapRepository, nodeRepository, boundaryService, attachmentService });
-  const app = createApp({ authService, mapService, nodeService, boundaryService, attachmentService });
+  const templateService = new TemplateService({ mapRepository, nodeRepository, registry: buildTemplateRegistry() });
+  const app = createApp({ authService, mapService, nodeService, boundaryService, attachmentService, templateService });
   app.locals.storage = storage;
   return app;
 }

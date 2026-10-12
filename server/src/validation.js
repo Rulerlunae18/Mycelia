@@ -18,6 +18,7 @@ export const createMapSchema = z.object({
   title: z.string().trim().min(1, 'Назва не може бути порожньою').max(120),
   theme: z.enum(THEMES).optional(),
   layout: z.enum(LAYOUTS).optional(),
+  template: z.string().trim().min(1).max(32).optional(), // ключ шаблону з /api/templates
 });
 
 export const updateMapSchema = z

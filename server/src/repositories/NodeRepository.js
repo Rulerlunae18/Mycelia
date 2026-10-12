@@ -11,6 +11,13 @@ export class NodeRepository {
     return this.prisma.node.create({ data: { mapId, parentId, text, order } });
   }
 
+  // Масове створення вузлів із готовими id (спершу батьки, потім діти) однією транзакцією
+  async createMany(rows) {
+    if (!rows.length) return [];
+    await this.prisma.$transaction([this.prisma.node.createMany({ data: rows })]);
+    return rows.map((r) => ({ ...r, attachments: [] }));
+  }
+
   update(id, data) {
     return this.prisma.node.update({ where: { id }, data });
   }

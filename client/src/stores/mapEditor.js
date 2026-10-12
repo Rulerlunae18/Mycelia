@@ -3,7 +3,7 @@ import { computed, ref } from 'vue';
 import { http } from '../api/http';
 import { checkFile } from '../core/attachments';
 import { DEFAULT_LAYOUT } from '../core/layout';
-import { DEFAULT_THEME } from '../core/theme';
+import { getTheme } from '../core/theme';
 import { TreeNode } from '../core/TreeNode';
 
 // Состояние открытой карты. Источник правды: плоский список nodes
@@ -18,7 +18,8 @@ export const useMapEditorStore = defineStore('mapEditor', () => {
 
   const root = computed(() => (nodes.value.length ? TreeNode.fromFlat(nodes.value) : null));
   const layout = computed(() => map.value?.layout ?? DEFAULT_LAYOUT);
-  const theme = computed(() => map.value?.theme ?? DEFAULT_THEME);
+  // Невідома назва (старі карти з темою «default») показується як тема за замовчуванням
+  const theme = computed(() => getTheme(map.value?.theme).name);
   const selected = computed(() => (selectedId.value && root.value ? root.value.find(selectedId.value) : null));
   // Вкладення лежать усередині рядків вузлів (так їх віддає сервер)
   const attachmentsOf = (nodeId) => nodes.value.find((n) => n.id === nodeId)?.attachments ?? [];
@@ -145,6 +146,20 @@ export const useMapEditorStore = defineStore('mapEditor', () => {
     if (parent?.collapsed) await patch(parentId, { collapsed: false });
   }
 
+  // Дублює гілку (Prototype на сервері): копія з'являється одразу після оригіналу
+  // і виділяється. Вкладення сервер не копіює.
+  async function duplicate(id) {
+    const { nodes: created, changes } = await http.post(`${base()}/${id}/duplicate`);
+    // зсув наступних сусідів застосовуємо до того, як з'являться нові вузли
+    applyChanges(changes.filter((c) => !created.some((n) => n.id === c.id)));
+    for (const n of created) {
+      const change = changes.find((c) => c.id === n.id);
+      nodes.value.push({ ...n, ...(change && { parentId: change.parentId, order: change.order }), attachments: n.attachments ?? [] });
+    }
+    selectedId.value = created[0].id;
+    return created[0];
+  }
+
   // Вантажить файли по одному; перша помилка зупиняє решту й піднімається вгору,
   // але вже завантажені лишаються. Повертає кількість успішно завантажених.
   async function uploadAttachments(nodeId, files) {
@@ -204,6 +219,6 @@ export const useMapEditorStore = defineStore('mapEditor', () => {
 
   return {
     map, nodes, boundaries, error, selectedId, root, layout, theme, selected,
-    load, select, addChild, addChildAndSelect, addSiblingAndSelect, setLayout, setTheme, renameMap, patch, rename, toggleCollapsed, move, moveAndReveal, remove, uploadAttachments, removeAttachment, selectedAttachments, attachmentCounts, addBoundaryForBranch, renameBoundary, removeBoundary,
+    load, select, addChild, addChildAndSelect, addSiblingAndSelect, setLayout, setTheme, renameMap, patch, rename, toggleCollapsed, move, moveAndReveal, duplicate, remove, uploadAttachments, removeAttachment, selectedAttachments, attachmentCounts, addBoundaryForBranch, renameBoundary, removeBoundary,
   };
 });

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { createMapSchema, parse, updateMapSchema } from '../validation.js';
 
-export function mapRoutes({ mapService, requireAuth }) {
+export function mapRoutes({ mapService, templateService, requireAuth }) {
   const router = Router();
   router.use(requireAuth);
 
@@ -16,7 +16,10 @@ export function mapRoutes({ mapService, requireAuth }) {
   router.post('/', async (req, res, next) => {
     try {
       const data = parse(createMapSchema, req.body);
-      res.status(201).json({ map: await mapService.create(req.userId, data) });
+      const map = data.template
+        ? await templateService.createMap(req.userId, data)
+        : await mapService.create(req.userId, data);
+      res.status(201).json({ map });
     } catch (err) {
       next(err);
     }

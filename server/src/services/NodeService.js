@@ -1,4 +1,5 @@
 import { badRequest, notFound } from '../errors.js';
+import { NodePrototype } from '../domain/prototype.js';
 import { childrenOf, clamp, insertAt, reindex, subtreeIds } from '../domain/tree.js';
 
 export const MAX_NODES_PER_MAP = 2000;
@@ -77,6 +78,30 @@ export class NodeService {
     await this.nodes.saveOrder(changes);
     await this.maps.touch(mapId);
     return changes;
+  }
+
+  // Дублює гілку (Prototype): гілка стає прототипом, копія з'являється одразу після оригіналу.
+  // Вкладення не копіюються (файли не розмножуємо), області теж.
+  async duplicate(ownerId, mapId, nodeId) {
+    const nodes = await this.#load(ownerId, mapId);
+    const node = this.#find(nodes, nodeId);
+    if (node.parentId === null) throw badRequest('Корінь карти не можна дублювати');
+
+    const copy = NodePrototype.fromRows(nodes, nodeId).clone();
+    if (nodes.length + copy.size() > MAX_NODES_PER_MAP) {
+      throw badRequest(`Ліміт вузлів на карті: ${MAX_NODES_PER_MAP}`);
+    }
+    copy.text = `${node.text} (копія)`.slice(0, 2000);
+
+    const siblings = childrenOf(nodes, node.parentId).map((n) => n.id);
+    const position = siblings.indexOf(nodeId) + 1;
+    const rows = copy.toRows({ mapId, parentId: node.parentId, order: position });
+    const created = await this.nodes.createMany(rows);
+
+    const changes = reindex(insertAt(siblings, rows[0].id, position), node.parentId);
+    await this.nodes.saveOrder(changes);
+    await this.maps.touch(mapId);
+    return { nodes: created.map((n) => ({ ...n, order: changes.find((c) => c.id === n.id)?.order ?? n.order })), changes };
   }
 
   async remove(ownerId, mapId, nodeId) {

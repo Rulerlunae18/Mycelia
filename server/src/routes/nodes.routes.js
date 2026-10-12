@@ -36,6 +36,15 @@ export function nodeRoutes({ nodeService, requireAuth }) {
     }
   });
 
+  router.post('/:nodeId/duplicate', async (req, res, next) => {
+    try {
+      const { mapId, nodeId } = req.params;
+      res.status(201).json(await nodeService.duplicate(req.userId, mapId, nodeId));
+    } catch (err) {
+      next(err);
+    }
+  });
+
   router.delete('/:nodeId', async (req, res, next) => {
     try {
       const { mapId, nodeId } = req.params;
