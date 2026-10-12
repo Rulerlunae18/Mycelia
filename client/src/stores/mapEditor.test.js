@@ -231,4 +231,31 @@ describe('mapEditor store', () => {
     expect(http.delete).toHaveBeenCalledWith('/maps/m1/attachments/k');
     expect(store.attachmentCounts).toEqual({});
   });
+
+  it('дублює гілку: нові вузли з\'являються після оригіналу, сусіди зсуваються, копія виділена', async () => {
+    http.post.mockResolvedValue({
+      nodes: [
+        { id: 'a-copy', mapId: 'm1', parentId: 'r', text: 'A (копія)', order: 1, collapsed: false },
+        { id: 'a1-copy', mapId: 'm1', parentId: 'a-copy', text: 'A1', order: 0, collapsed: false },
+      ],
+      changes: [
+        { id: 'a', parentId: 'r', order: 0 },
+        { id: 'a-copy', parentId: 'r', order: 1 },
+        { id: 'b', parentId: 'r', order: 2 },
+      ],
+    });
+    const copy = await store.duplicate('a');
+    expect(http.post).toHaveBeenCalledWith('/maps/m1/nodes/a/duplicate');
+    expect(copy.id).toBe('a-copy');
+    expect(store.root.children.map((c) => c.id)).toEqual(['a', 'a-copy', 'b']);
+    expect(store.root.find('a-copy').children.map((c) => c.text)).toEqual(['A1']);
+    expect(store.selectedId).toBe('a-copy');
+  });
+
+  it('карта зі старою темою «default» показується з темою за замовчуванням', async () => {
+    store.map.theme = 'default';
+    expect(store.theme).toBe('forest');
+    store.map.theme = 'ocean';
+    expect(store.theme).toBe('ocean');
+  });
 });

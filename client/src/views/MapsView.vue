@@ -9,11 +9,13 @@ const tabs = useTabsStore();
 const maps = ref([]);
 const title = ref('');
 const loading = ref(true);
+const templates = ref([]); // зразки з сервера для нової карти
+const template = ref('');
 const error = ref('');
 
 async function load() {
   try {
-    maps.value = (await http.get('/maps')).maps;
+    [maps.value, templates.value] = [(await http.get('/maps')).maps, (await http.get('/templates')).templates];
   } catch (err) {
     error.value = err.message;
   } finally {
@@ -25,7 +27,7 @@ async function create() {
   if (!title.value.trim()) return;
   error.value = '';
   try {
-    const { map } = await http.post('/maps', { title: title.value });
+    const { map } = await http.post('/maps', { title: title.value, ...(template.value && { template: template.value }) });
     router.push({ name: 'editor', params: { id: map.id } });
   } catch (err) {
     error.value = err.message;
@@ -52,6 +54,10 @@ onMounted(load);
 
   <form class="create card" @submit.prevent="create">
     <input v-model="title" type="text" placeholder="Назва нової карти" maxlength="120" aria-label="Назва нової карти" />
+    <select v-model="template" aria-label="Шаблон">
+      <option value="">Порожня карта</option>
+      <option v-for="t in templates" :key="t.key" :value="t.key" :title="t.description">{{ t.title }}</option>
+    </select>
     <button class="btn btn-primary" :disabled="!title.trim()">Створити</button>
   </form>
 
@@ -69,7 +75,9 @@ onMounted(load);
 </template>
 
 <style scoped>
-.create { display: flex; gap: 12px; margin-bottom: 24px; }
+.create { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 24px; }
+.create select { font: inherit; padding: 0 10px; color: var(--text); background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; }
+.create input { flex: 1; min-width: 200px; }
 .list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
 .item { display: flex; align-items: center; gap: 16px; padding: 14px 18px; }
 .name { flex: 1; font-weight: 600; }
