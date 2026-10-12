@@ -1,6 +1,6 @@
 import { ThemeFactory } from './ThemeFactory.js';
-import { CanvasStyle, EdgeStyle, MarkStyle, NodeStyle } from './products.js';
-import { inkOn } from './contrast.js';
+import { BoundaryStyle, CanvasStyle, EdgeStyle, MarkStyle, NodeStyle } from './products.js';
+import { inkOn, withAlpha } from './contrast.js';
 
 // Спільна реалізація «з палітри»: конкретна тема лише називає себе і дає палітру.
 class PaletteTheme extends ThemeFactory {
@@ -33,6 +33,13 @@ class PaletteTheme extends ThemeFactory {
   createMarkStyle(kind, key) {
     const fill = this.p[kind]?.[key] ?? this.p.edge;
     return new MarkStyle({ fill, ink: inkOn(fill) });
+  }
+
+  // Кольори областей беремо з палітри значків теми, вони вже підібрані під її фон
+  createBoundaryStyle(index = 0) {
+    const colors = Object.values(this.p.category);
+    const color = colors[index % colors.length];
+    return new BoundaryStyle({ stroke: color, fill: withAlpha(color, 0.08), labelColor: color });
   }
 
   createCanvasStyle() {

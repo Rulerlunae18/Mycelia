@@ -26,3 +26,10 @@ export class CanvasStyle {
     Object.assign(this, { background, dot, accent, ink });
   }
 }
+
+// Область: пунктирна лінія, ледь помітна заливка і колір підпису
+export class BoundaryStyle {
+  constructor({ stroke, fill, labelColor }) {
+    Object.assign(this, { stroke, fill, labelColor });
+  }
+}

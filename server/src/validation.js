@@ -71,3 +71,17 @@ export function parse(schema, data) {
   }
   return result.data;
 }
+
+// ---- Області (пунктирні контури навколо групи вузлів) ----
+
+const boundaryLabel = z.string().trim().max(120, 'Назва області занадто довга (максимум 120 символів)');
+const boundaryNodeIds = z.array(z.string().min(1)).min(1, 'Область має містити хоча б один вузол').max(2000);
+
+export const createBoundarySchema = z.object({
+  label: boundaryLabel.default(''),
+  nodeIds: boundaryNodeIds,
+});
+
+export const updateBoundarySchema = z
+  .object({ label: boundaryLabel.optional(), nodeIds: boundaryNodeIds.optional() })
+  .refine((v) => Object.keys(v).length > 0, 'Немає полів для оновлення');

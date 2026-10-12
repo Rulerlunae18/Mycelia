@@ -13,12 +13,13 @@ const props = defineProps({
   layout: { type: String, default: 'radial' },
   selectedId: { type: String, default: null },
   theme: { type: String, default: 'forest' },
+  boundaries: { type: Array, default: () => [] },
 });
 const emit = defineEmits(['select', 'toggle', 'move', 'rename', 'add-child', 'add-sibling', 'remove']);
 
 const renderer = new MapRenderer(new SvgSceneBackend());
 const scene = computed(() =>
-  renderer.render(props.root, { layout: props.layout, selectedId: props.selectedId, theme: props.theme }),
+  renderer.render(props.root, { layout: props.layout, selectedId: props.selectedId, theme: props.theme, boundaries: props.boundaries }),
 );
 
 // Фон і акценти полотна дає тема; решта стилів іде через CSS-змінні
@@ -240,6 +241,11 @@ defineExpose({ fit, edit });
       @wheel.prevent="onWheel"
     >
       <g :transform="transform">
+        <g v-for="b in scene.boundaries" :key="b.id" class="boundary" pointer-events="none">
+          <path :d="b.path" :fill="b.look.fill" :stroke="b.look.stroke" />
+          <text v-if="b.label" :x="b.labelAt.x" :y="b.labelAt.y" :fill="b.look.labelColor">{{ b.label }}</text>
+        </g>
+
         <path
           v-for="e in scene.edges"
           :key="e.id"
@@ -327,6 +333,8 @@ defineExpose({ fit, edit });
 .surface { width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; user-select: none; }
 .surface:active { cursor: grabbing; }
 
+.boundary path { stroke-width: 2; stroke-dasharray: 9 6; stroke-linecap: round; }
+.boundary text { font-size: 12px; font-weight: 700; }
 .edge { fill: none; stroke-linecap: round; }
 
 .node { cursor: pointer; outline: none; }

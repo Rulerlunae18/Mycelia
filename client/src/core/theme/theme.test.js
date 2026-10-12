@@ -11,6 +11,7 @@ describe('Abstract Factory: теми', () => {
       expect(Object.keys(t.createNodeStyle())).toEqual(['fill', 'stroke', 'strokeWidth', 'textColor', 'fontSize', 'fontWeight']);
       expect(Object.keys(t.createEdgeStyle(1))).toEqual(['stroke', 'width', 'opacity']);
       expect(Object.keys(t.createMarkStyle('category', 'idea'))).toEqual(['fill', 'ink']);
+      expect(Object.keys(t.createBoundaryStyle(0))).toEqual(['stroke', 'fill', 'labelColor']);
       expect(Object.keys(t.createCanvasStyle())).toEqual(['background', 'dot', 'accent', 'ink']);
     }
   });
@@ -40,6 +41,15 @@ describe('Abstract Factory: теми', () => {
       for (const p of PRIORITIES) {
         const m = t.createMarkStyle('priority', p.key);
         expect(contrastRatio(m.ink, m.fill), `${t.name} ${p.key}`).toBeGreaterThanOrEqual(4.5);
+      }
+    }
+  });
+
+  it('підпис області помітний на полотні (контраст ≥ 3, великий жирний текст)', () => {
+    for (const t of Object.values(THEMES)) {
+      const bg = t.createCanvasStyle().background;
+      for (let i = 0; i < 6; i++) {
+        expect(contrastRatio(t.createBoundaryStyle(i).labelColor, bg), `${t.name} #${i}`).toBeGreaterThanOrEqual(3);
       }
     }
   });

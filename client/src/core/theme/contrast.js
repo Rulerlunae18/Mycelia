@@ -16,3 +16,9 @@ export function contrastRatio(a, b) {
 
 // Чорний або білий, залежно від того, що контрастніше на заливці
 export const inkOn = (fill) => (contrastRatio(fill, '#000000') >= contrastRatio(fill, '#ffffff') ? '#000000' : '#ffffff');
+
+// '#rrggbb' + прозорість -> 'rgba(...)'
+export function withAlpha(hex, alpha) {
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+}

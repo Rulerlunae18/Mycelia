@@ -11,6 +11,7 @@ import { TreeNode } from '../core/TreeNode';
 export const useMapEditorStore = defineStore('mapEditor', () => {
   const map = ref(null);
   const nodes = ref([]);
+  const boundaries = ref([]); // пунктирні області: { id, label, nodeIds }
   const error = ref('');
   const selectedId = ref(null);
 
@@ -27,13 +28,15 @@ export const useMapEditorStore = defineStore('mapEditor', () => {
     error.value = '';
     map.value = null;
     nodes.value = [];
+    boundaries.value = [];
     selectedId.value = null;
     const { map: loaded } = await http.get(`/maps/${mapId}`);
     // Користувач міг уже перейти на іншу вкладку: пізня відповідь не має перезаписати нову карту
     if (token !== loadToken) return;
-    const { nodes: rows, ...rest } = loaded;
+    const { nodes: rows, boundaries: areas = [], ...rest } = loaded;
     map.value = rest;
     nodes.value = rows;
+    boundaries.value = areas;
   }
 
   // Применяет список { id, parentId, order }, который возвращает сервер
@@ -135,16 +138,42 @@ export const useMapEditorStore = defineStore('mapEditor', () => {
     if (parent?.collapsed) await patch(parentId, { collapsed: false });
   }
 
+  // Область з усієї гілки: вузол і всі його нащадки на цей момент
+  async function addBoundaryForBranch(id) {
+    const branch = root.value?.find(id);
+    if (!branch) return null;
+    const nodeIds = [...branch.walk()].map((n) => n.id);
+    const label = `Область ${boundaries.value.length + 1}`;
+    const { boundary } = await http.post(`/maps/${map.value.id}/boundaries`, { label, nodeIds });
+    boundaries.value.push(boundary);
+    return boundary;
+  }
+
+  async function renameBoundary(id, label) {
+    const { boundary } = await http.patch(`/maps/${map.value.id}/boundaries/${id}`, { label });
+    const target = boundaries.value.find((b) => b.id === id);
+    if (target) target.label = boundary.label;
+  }
+
+  async function removeBoundary(id) {
+    await http.delete(`/maps/${map.value.id}/boundaries/${id}`);
+    boundaries.value = boundaries.value.filter((b) => b.id !== id);
+  }
+
   async function remove(id) {
     const { deleted, changes } = await http.delete(`${base()}/${id}`);
     const gone = new Set(deleted);
     nodes.value = nodes.value.filter((n) => !gone.has(n.id));
     if (gone.has(selectedId.value)) selectedId.value = null;
+    // так само, як на сервері: видалені вузли зникають з областей, порожні області теж
+    boundaries.value = boundaries.value
+      .map((b) => ({ ...b, nodeIds: b.nodeIds.filter((n) => !gone.has(n)) }))
+      .filter((b) => b.nodeIds.length);
     applyChanges(changes);
   }
 
   return {
-    map, nodes, error, selectedId, root, layout, theme, selected,
-    load, select, addChild, addChildAndSelect, addSiblingAndSelect, setLayout, setTheme, renameMap, patch, rename, toggleCollapsed, move, moveAndReveal, remove,
+    map, nodes, boundaries, error, selectedId, root, layout, theme, selected,
+    load, select, addChild, addChildAndSelect, addSiblingAndSelect, setLayout, setTheme, renameMap, patch, rename, toggleCollapsed, move, moveAndReveal, remove, addBoundaryForBranch, renameBoundary, removeBoundary,
   };
 });

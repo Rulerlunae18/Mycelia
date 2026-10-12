@@ -1,4 +1,5 @@
 import { edgePath } from '../geometry.js';
+import { boundaryOutline } from '../boundary.js';
 import { LayoutContext } from '../layout/index.js';
 import { CATEGORY_INSET, findCategory, findPriority } from '../marks.js';
 import { getTheme } from '../theme/index.js';
@@ -22,7 +23,7 @@ export class MapRenderer {
 
   // layout: назва розкладки, selectedId: виділений вузол, theme: назва теми
   // (стилі дає фабрика теми, Abstract Factory)
-  render(root, { layout, selectedId = null, theme } = {}) {
+  render(root, { layout, selectedId = null, theme, boundaries = [] } = {}) {
     if (layout) this.layout.use(layout);
     const factory = getTheme(theme);
     const { rects, bounds } = this.layout.compute(root);
@@ -30,6 +31,21 @@ export class MapRenderer {
     const nodes = [...visibleNodes(root)];
 
     backend.begin(bounds, factory.createCanvasStyle());
+
+    // Області під усім. Прямокутники є лише у видимих вузлів, тож згорнута гілка
+    // просто не впливає на контур; область без видимих вузлів не малюється.
+    boundaries.forEach((b, index) => {
+      const outline = boundaryOutline(b.nodeIds.map((id) => rects.get(id)).filter(Boolean));
+      if (!outline) return;
+      backend.drawBoundary({
+        id: b.id,
+        label: b.label ?? '',
+        path: outline.path,
+        labelAt: outline.labelAt,
+        index,
+        look: factory.createBoundaryStyle(index),
+      });
+    });
 
     // Лінії малюємо першими, щоб вузли лягали поверх них
     for (const node of nodes) {
