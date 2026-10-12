@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import { http } from '../api/http';
+import { checkFile } from '../core/attachments';
 import { DEFAULT_LAYOUT } from '../core/layout';
 import { DEFAULT_THEME } from '../core/theme';
 import { TreeNode } from '../core/TreeNode';
@@ -19,6 +20,12 @@ export const useMapEditorStore = defineStore('mapEditor', () => {
   const layout = computed(() => map.value?.layout ?? DEFAULT_LAYOUT);
   const theme = computed(() => map.value?.theme ?? DEFAULT_THEME);
   const selected = computed(() => (selectedId.value && root.value ? root.value.find(selectedId.value) : null));
+  // Вкладення лежать усередині рядків вузлів (так їх віддає сервер)
+  const attachmentsOf = (nodeId) => nodes.value.find((n) => n.id === nodeId)?.attachments ?? [];
+  const selectedAttachments = computed(() => (selectedId.value ? attachmentsOf(selectedId.value) : []));
+  const attachmentCounts = computed(() =>
+    Object.fromEntries(nodes.value.filter((n) => n.attachments?.length).map((n) => [n.id, n.attachments.length])),
+  );
   const base = () => `/maps/${map.value.id}/nodes`;
 
   let loadToken = 0;
@@ -138,6 +145,29 @@ export const useMapEditorStore = defineStore('mapEditor', () => {
     if (parent?.collapsed) await patch(parentId, { collapsed: false });
   }
 
+  // Вантажить файли по одному; перша помилка зупиняє решту й піднімається вгору,
+  // але вже завантажені лишаються. Повертає кількість успішно завантажених.
+  async function uploadAttachments(nodeId, files) {
+    const node = nodes.value.find((n) => n.id === nodeId);
+    if (!node) return 0;
+    node.attachments ??= [];
+    let done = 0;
+    for (const file of files) {
+      const problem = checkFile(file, node.attachments.length);
+      if (problem) throw new Error(problem);
+      const { attachment } = await http.upload(`${base()}/${nodeId}/attachments`, file);
+      node.attachments.push(attachment);
+      done += 1;
+    }
+    return done;
+  }
+
+  async function removeAttachment(nodeId, id) {
+    await http.delete(`/maps/${map.value.id}/attachments/${id}`);
+    const node = nodes.value.find((n) => n.id === nodeId);
+    if (node) node.attachments = node.attachments.filter((a) => a.id !== id);
+  }
+
   // Область з усієї гілки: вузол і всі його нащадки на цей момент
   async function addBoundaryForBranch(id) {
     const branch = root.value?.find(id);
@@ -174,6 +204,6 @@ export const useMapEditorStore = defineStore('mapEditor', () => {
 
   return {
     map, nodes, boundaries, error, selectedId, root, layout, theme, selected,
-    load, select, addChild, addChildAndSelect, addSiblingAndSelect, setLayout, setTheme, renameMap, patch, rename, toggleCollapsed, move, moveAndReveal, remove, addBoundaryForBranch, renameBoundary, removeBoundary,
+    load, select, addChild, addChildAndSelect, addSiblingAndSelect, setLayout, setTheme, renameMap, patch, rename, toggleCollapsed, move, moveAndReveal, remove, uploadAttachments, removeAttachment, selectedAttachments, attachmentCounts, addBoundaryForBranch, renameBoundary, removeBoundary,
   };
 });

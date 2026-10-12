@@ -14,12 +14,13 @@ const props = defineProps({
   selectedId: { type: String, default: null },
   theme: { type: String, default: 'forest' },
   boundaries: { type: Array, default: () => [] },
+  attachmentCounts: { type: Object, default: () => ({}) },
 });
 const emit = defineEmits(['select', 'toggle', 'move', 'rename', 'add-child', 'add-sibling', 'remove']);
 
 const renderer = new MapRenderer(new SvgSceneBackend());
 const scene = computed(() =>
-  renderer.render(props.root, { layout: props.layout, selectedId: props.selectedId, theme: props.theme, boundaries: props.boundaries }),
+  renderer.render(props.root, { layout: props.layout, selectedId: props.selectedId, theme: props.theme, boundaries: props.boundaries, attachmentCounts: props.attachmentCounts }),
 );
 
 // Фон і акценти полотна дає тема; решта стилів іде через CSS-змінні
@@ -286,6 +287,12 @@ defineExpose({ fit, edit });
             <circle r="8" :fill="n.marks.priority.fill" />
             <text :fill="n.marks.priority.ink">{{ n.marks.priority.glyph }}</text>
           </g>
+          <g v-if="n.attachmentCount" class="clip" :transform="`translate(${n.rect.width - 30} ${n.rect.height - 7})`">
+            <title>Вкладень: {{ n.attachmentCount }}</title>
+            <rect width="30" height="15" rx="7.5" />
+            <path d="M8 3.5h3.5l2 2V11H8z" />
+            <text x="22" y="8">{{ n.attachmentCount }}</text>
+          </g>
           <g v-if="n.collapsed" class="badge" :transform="`translate(${n.rect.width - 6} ${-8})`">
             <rect :width="badgeWidth(n.hiddenCount)" height="18" rx="9" />
             <text :x="badgeWidth(n.hiddenCount) / 2" y="9">+{{ n.hiddenCount }}</text>
@@ -341,6 +348,10 @@ defineExpose({ fit, edit });
 .node rect { fill: var(--n-fill); stroke: var(--n-stroke); stroke-width: var(--n-sw); transition: stroke 0.12s; }
 .node .label { fill: var(--n-ink); font-size: var(--n-fs); font-weight: var(--n-fw); text-anchor: middle; dominant-baseline: central; pointer-events: none; }
 .node:hover rect, .node:focus-visible rect { stroke: var(--c-accent); }
+.clip { pointer-events: none; }
+.clip rect { fill: var(--c-bg); stroke: var(--c-accent); stroke-width: 1.2; }
+.clip path { fill: none; stroke: var(--c-accent); stroke-width: 1.2; stroke-linejoin: round; }
+.clip text { fill: var(--c-accent); font-size: 10px; font-weight: 700; text-anchor: middle; dominant-baseline: central; }
 .mark { pointer-events: none; }
 .mark text { font-size: 11px; font-weight: 700; text-anchor: middle; dominant-baseline: central; }
 .priority text { font-size: 10px; }

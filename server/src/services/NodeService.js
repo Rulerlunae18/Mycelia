@@ -6,9 +6,10 @@ export const MAX_NODES_PER_MAP = 2000;
 // Сервіс (SOA): вузли карти. Усі операції спершу перевіряють, що карта
 // належить користувачеві, і вже потім працюють із деревом.
 export class NodeService {
-  constructor({ mapRepository, nodeRepository, boundaryService = null }) {
+  constructor({ mapRepository, nodeRepository, boundaryService = null, attachmentService = null }) {
     this.maps = mapRepository;
     this.nodes = nodeRepository;
+    this.attachmentService = attachmentService; // стирає файли вкладень видалених вузлів
     this.boundaryService = boundaryService; // чистить області від видалених вузлів
   }
 
@@ -85,7 +86,9 @@ export class NodeService {
 
     const deleted = subtreeIds(nodes, nodeId);
     // Спершу листки, потім батьки (див. NodeRepository.deleteLeafFirst)
+    const fileKeys = (await this.attachmentService?.keysForNodes(deleted)) ?? [];
     await this.nodes.deleteLeafFirst([...deleted].reverse());
+    await this.attachmentService?.dropFiles(fileKeys);
 
     const siblings = childrenOf(nodes, node.parentId)
       .map((n) => n.id)

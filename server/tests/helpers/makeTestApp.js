@@ -1,10 +1,12 @@
 import { createApp } from '../../src/app.js';
 import { AuthService } from '../../src/services/AuthService.js';
+import { AttachmentService } from '../../src/services/AttachmentService.js';
 import { BoundaryService } from '../../src/services/BoundaryService.js';
 import { MapService } from '../../src/services/MapService.js';
 import { NodeService } from '../../src/services/NodeService.js';
-import { FakeBoundaryRepository, FakeMapRepository, FakeNodeRepository, FakeUserRepository } from './fakeRepositories.js';
+import { FakeAttachmentRepository, FakeBoundaryRepository, FakeStorage, FakeMapRepository, FakeNodeRepository, FakeUserRepository } from './fakeRepositories.js';
 
+// storage можно подсмотреть в тестах: app.locals.storage
 export function makeTestApp() {
   const authService = new AuthService({
     userRepository: new FakeUserRepository(),
@@ -12,13 +14,19 @@ export function makeTestApp() {
     jwtExpiresSeconds: 3600,
   });
   const mapRepository = new FakeMapRepository();
-  const mapService = new MapService({ mapRepository });
   const nodeRepository = new FakeNodeRepository(mapRepository);
+  const attachmentRepository = new FakeAttachmentRepository(mapRepository);
+  mapRepository.attachmentRepository = attachmentRepository;
+  const storage = new FakeStorage();
+  const attachmentService = new AttachmentService({ mapRepository, nodeRepository, attachmentRepository, storage });
+  const mapService = new MapService({ mapRepository, attachmentService });
   const boundaryService = new BoundaryService({
     mapRepository,
     nodeRepository,
     boundaryRepository: new FakeBoundaryRepository(mapRepository),
   });
-  const nodeService = new NodeService({ mapRepository, nodeRepository, boundaryService });
-  return createApp({ authService, mapService, nodeService, boundaryService });
+  const nodeService = new NodeService({ mapRepository, nodeRepository, boundaryService, attachmentService });
+  const app = createApp({ authService, mapService, nodeService, boundaryService, attachmentService });
+  app.locals.storage = storage;
+  return app;
 }

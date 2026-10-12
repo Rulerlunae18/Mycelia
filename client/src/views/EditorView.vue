@@ -2,6 +2,7 @@
 import { nextTick, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ApiError } from '../api/http';
+import AttachmentPanel from '../components/AttachmentPanel.vue';
 import MapCanvas from '../components/MapCanvas.vue';
 import MapTabs from '../components/MapTabs.vue';
 import NodeItem from '../components/NodeItem.vue';
@@ -17,6 +18,7 @@ const store = useMapEditorStore();
 const tabs = useTabsStore();
 const error = ref('');
 const canvas = ref(null);
+const uploading = ref(false);
 
 async function openMap(id) {
   error.value = '';
@@ -39,6 +41,15 @@ async function openMap(id) {
 onMounted(() => openMap(route.params.id));
 // Той самий компонент показує різні карти: перемикання вкладки міняє лише адресу
 watch(() => route.params.id, (id) => id && openMap(id));
+
+async function uploadFiles(nodeId, files) {
+  uploading.value = true;
+  try {
+    await run(() => store.uploadAttachments(nodeId, files));
+  } finally {
+    uploading.value = false;
+  }
+}
 
 function closeTab(id) {
   const next = tabs.close(id);
@@ -144,6 +155,7 @@ function removeSelected(id = store.selectedId) {
       :layout="store.layout"
 :theme="store.theme"
       :boundaries="store.boundaries"
+      :attachment-counts="store.attachmentCounts"
       :selected-id="store.selectedId"
       @select="store.select"
       @toggle="(id) => run(() => store.toggleCollapsed(id))"
@@ -157,6 +169,16 @@ function removeSelected(id = store.selectedId) {
       Колесо миші: масштаб · перетягни фон, щоб посунути карту · подвійний клік по вузлу згортає і розгортає гілку · тягни вузол на середину іншого, щоб зробити його дитиною, або на край, щоб змінити порядок.
       <br />Клавіші: <kbd>Tab</kbd> вкладений · <kbd>Enter</kbd> сусід · <kbd>F2</kbd> текст · <kbd>Delete</kbd> видалити · <kbd>Esc</kbd> зняти виділення.
     </p>
+
+    <AttachmentPanel
+      v-if="store.selected && store.map"
+      :map-id="store.map.id"
+      :node-title="store.selected.text"
+      :attachments="store.selectedAttachments"
+      :busy="uploading"
+      @upload="(files) => uploadFiles(store.selectedId, files)"
+      @remove="(id) => run(() => store.removeAttachment(store.selectedId, id))"
+    />
 
     <details v-if="store.boundaries.length" class="card outline" open>
       <summary>Області ({{ store.boundaries.length }})</summary>
