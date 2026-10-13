@@ -1,9 +1,13 @@
 <script setup>
-import { useRouter } from 'vue-router';
+import { computed } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from './stores/auth';
 
 const auth = useAuthStore();
 const router = useRouter();
+const route = useRoute();
+// Екрани входу й реєстрації без шапки: там головне фон і форма
+const bare = computed(() => !!route.meta.bare);
 
 async function logout() {
   await auth.logout();
@@ -12,7 +16,7 @@ async function logout() {
 </script>
 
 <template>
-  <header class="topbar">
+  <header v-if="!bare" class="topbar">
     <div class="container bar">
       <RouterLink to="/maps" class="brand">Mycelia</RouterLink>
       <div v-if="auth.user" class="user">
@@ -21,9 +25,10 @@ async function logout() {
       </div>
     </div>
   </header>
-  <main class="container page">
+  <main v-if="!bare" class="container page">
     <RouterView />
   </main>
+  <RouterView v-else />
 </template>
 
 <style scoped>
