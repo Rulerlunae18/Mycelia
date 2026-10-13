@@ -1,5 +1,6 @@
 <script setup>
 import { ref } from 'vue';
+import MyceliumBackdrop from './MyceliumBackdrop.vue';
 
 const props = defineProps({
   title: { type: String, required: true },
@@ -27,6 +28,7 @@ async function submit() {
 </script>
 
 <template>
+  <MyceliumBackdrop />
   <form class="card form" @submit.prevent="submit">
     <h1>{{ title }}</h1>
     <div class="field">
@@ -44,6 +46,10 @@ async function submit() {
 </template>
 
 <style scoped>
-.form { max-width: 420px; margin: 8vh auto 0; }
+.form {
+  position: relative; z-index: 1; max-width: 420px; margin: 8vh auto 0;
+  background: rgba(22, 34, 28, 0.78); backdrop-filter: blur(10px);
+  box-shadow: 0 0 0 1px rgba(126, 224, 164, 0.06), 0 24px 60px rgba(0, 0, 0, 0.45);
+}
 .alt { margin: 16px 0 0; font-size: 0.9rem; }
 </style>

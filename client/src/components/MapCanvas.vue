@@ -62,6 +62,23 @@ onMounted(async () => {
 });
 onBeforeUnmount(() => observer?.disconnect());
 
+// ---- повний екран: розгортаємо саме полотно, тож правка вузлів і гарячі клавіші працюють як є ----
+const canFullscreen = typeof document !== 'undefined' && !!document.fullscreenEnabled;
+const fullscreen = ref(false);
+
+function onFullscreenChange() {
+  fullscreen.value = document.fullscreenElement === host.value;
+  // Розмір полотна змінився: вписуємо карту, щоб вона не лишилась у куті
+  nextTick(fit);
+}
+function toggleFullscreen() {
+  if (!canFullscreen) return;
+  if (document.fullscreenElement) document.exitFullscreen?.();
+  else host.value?.requestFullscreen?.().catch(() => {});
+}
+onMounted(() => document.addEventListener?.('fullscreenchange', onFullscreenChange));
+onBeforeUnmount(() => document.removeEventListener?.('fullscreenchange', onFullscreenChange));
+
 // Нова розкладка змінює розміри карти, тож вписуємо її заново.
 // Звичайні правки вигляд не зсувають: карта не стрибає під час редагування.
 watch(() => props.layout, () => nextTick(fit));
@@ -222,6 +239,7 @@ function onKeydown(e) {
     return;
   }
   if (e.altKey) return;
+  if (e.code === 'KeyF' && !e.shiftKey) { e.preventDefault(); toggleFullscreen(); return; }
   const id = props.selectedId;
   if (e.key === 'Escape') return emit('select', null);
   if (!id) return;
@@ -233,7 +251,7 @@ function onKeydown(e) {
 
 const badgeWidth = (count) => String(count).length * 7 + 18;
 
-defineExpose({ fit, edit });
+defineExpose({ fit, edit, toggleFullscreen });
 </script>
 
 <template>
@@ -332,6 +350,11 @@ defineExpose({ fit, edit });
       <button class="btn btn-small" aria-label="Зменшити" @click="zoomButton(1 / 1.25)">−</button>
       <button class="btn btn-small" aria-label="Збільшити" @click="zoomButton(1.25)">＋</button>
       <button class="btn btn-small" @click="fit">Вписати</button>
+      <button
+        v-if="canFullscreen" class="btn btn-small" :aria-pressed="fullscreen"
+        :title="fullscreen ? 'Вийти з повного екрана (Esc або F)' : 'На весь екран (F)'"
+        @click="toggleFullscreen"
+      >{{ fullscreen ? '⤡ Згорнути' : '⛶ На весь екран' }}</button>
     </div>
   </div>
 </template>
@@ -344,6 +367,7 @@ defineExpose({ fit, edit });
   border-radius: var(--radius);
   overflow: hidden;
 }
+.canvas:fullscreen { height: 100vh; border: 0; border-radius: 0; }
 .surface { width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; user-select: none; }
 .surface:active { cursor: grabbing; }
 
