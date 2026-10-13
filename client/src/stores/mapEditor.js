@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import { http } from '../api/http';
 import { checkFile } from '../core/attachments';
+import { History } from '../core/history';
 import { DEFAULT_LAYOUT } from '../core/layout';
 import { getTheme } from '../core/theme';
 import { TreeNode } from '../core/TreeNode';
@@ -15,6 +16,17 @@ export const useMapEditorStore = defineStore('mapEditor', () => {
   const boundaries = ref([]); // пунктирні області: { id, label, nodeIds }
   const error = ref('');
   const selectedId = ref(null);
+
+  // Історія дій (Command). Стор це одержувач: дії нижче створюють команди зі своєю
+  // оберненою операцією, а History лише виконує їх і веде стеки скасування/повтору.
+  const historyState = ref({ canUndo: false, canRedo: false, undoLabel: '', redoLabel: '' });
+  const history = new History({
+    onChange: () => {
+      historyState.value = {
+        canUndo: history.canUndo, canRedo: history.canRedo, undoLabel: history.undoLabel, redoLabel: history.redoLabel,
+      };
+    },
+  });
 
   const root = computed(() => (nodes.value.length ? TreeNode.fromFlat(nodes.value) : null));
   const layout = computed(() => map.value?.layout ?? DEFAULT_LAYOUT);
@@ -38,6 +50,7 @@ export const useMapEditorStore = defineStore('mapEditor', () => {
     nodes.value = [];
     boundaries.value = [];
     selectedId.value = null;
+    history.clear();
     const { map: loaded } = await http.get(`/maps/${mapId}`);
     // Користувач міг уже перейти на іншу вкладку: пізня відповідь не має перезаписати нову карту
     if (token !== loadToken) return;
@@ -65,14 +78,64 @@ export const useMapEditorStore = defineStore('mapEditor', () => {
     selectedId.value = id;
   };
 
+  // ---- знімки для команд ----
+  const rowOf = (n) => ({
+    id: n.id, parentId: n.parentId, text: n.text, collapsed: !!n.collapsed,
+    style: n.style ?? null, category: n.category ?? null, priority: n.priority ?? null, order: n.order,
+  });
+
+  // Гілка від батька до дітей (так її приймає сервер при відновленні)
+  function branchRows(id) {
+    const node = root.value?.find(id);
+    if (!node) return [];
+    return [...node.walk()].map((n) => rowOf(nodes.value.find((r) => r.id === n.id)));
+  }
+
+  const siblingIndex = (id) => {
+    const n = root.value?.find(id);
+    return n?.parent ? n.parent.children.indexOf(n) : 0;
+  };
+
+  // Відновлює вузли з відомими id (скасування видалення, повтор додавання)
+  async function restoreRows(rows) {
+    const { nodes: created, changes } = await http.post(`${base()}/restore`, { nodes: rows });
+    applyChanges(changes.filter((c) => !created.some((n) => n.id === c.id)));
+    for (const n of created) {
+      const change = changes.find((c) => c.id === n.id);
+      nodes.value.push({ ...n, ...(change && { parentId: change.parentId, order: change.order }), attachments: n.attachments ?? [] });
+    }
+  }
+
+  const record = (cmd) => history.execute(cmd);
+
   // Додає дитину, розгортає згорнутого батька, щоб новий вузол був видимий,
   // і виділяє новий вузол: так можна додавати ідеї одну за одною.
   async function addChildAndSelect(parentId, text) {
-    const node = await addChild(parentId, text);
     const parent = nodes.value.find((n) => n.id === parentId);
-    if (parent?.collapsed) await patch(parentId, { collapsed: false });
-    selectedId.value = node.id;
-    return node;
+    const expanded = !!parent?.collapsed;
+    let created = null;
+    const cmd = {
+      kind: 'add',
+      rows: null,
+      label: 'додавання вузла',
+      do: async () => {
+        created = await addChild(parentId, text);
+        cmd.rows = [rowOf(created)];
+        if (expanded) await patchRaw(parentId, { collapsed: false });
+      },
+      undo: async () => {
+        await removeRaw(created.id);
+        if (expanded) await patchRaw(parentId, { collapsed: true });
+      },
+      redo: async () => {
+        await restoreRows(cmd.rows);
+        if (expanded) await patchRaw(parentId, { collapsed: false });
+      },
+      focusId: () => created.id,
+    };
+    await record(cmd);
+    selectedId.value = created.id;
+    return created;
   }
 
   // Сусід одразу після вузла (як Enter у XMind). У кореня сусідів немає, тому
@@ -82,11 +145,24 @@ export const useMapEditorStore = defineStore('mapEditor', () => {
     if (!node || node.isRoot) return addChildAndSelect(id);
     const parentId = node.parent.id;
     const position = node.parent.children.indexOf(node) + 1;
-    const created = await addChild(parentId, undefined, position);
-    // сервер вставив вузол і зсунув наступних сусідів, відтворюємо це локально
-    const siblings = nodes.value.filter((n) => n.parentId === parentId && n.id !== created.id).sort((a, b) => a.order - b.order);
-    siblings.splice(position, 0, created);
-    siblings.forEach((n, i) => (n.order = i));
+    let created = null;
+    const cmd = {
+      kind: 'add',
+      rows: null,
+      label: 'додавання вузла',
+      do: async () => {
+        created = await addChild(parentId, undefined, position);
+        // сервер вставив вузол і зсунув наступних сусідів, відтворюємо це локально
+        const siblings = nodes.value.filter((n) => n.parentId === parentId && n.id !== created.id).sort((a, b) => a.order - b.order);
+        siblings.splice(position, 0, created);
+        siblings.forEach((n, i) => (n.order = i));
+        cmd.rows = [rowOf(created)];
+      },
+      undo: () => removeRaw(created.id),
+      redo: () => restoreRows(cmd.rows),
+      focusId: () => created.id,
+    };
+    await record(cmd);
     selectedId.value = created.id;
     return created;
   }
@@ -121,17 +197,37 @@ export const useMapEditorStore = defineStore('mapEditor', () => {
     }
   }
 
-  async function patch(id, data) {
+  // Без запису в історію: ним користуються самі команди
+  async function patchRaw(id, data) {
     const { node } = await http.patch(`${base()}/${id}`, data);
     const target = nodes.value.find((n) => n.id === id);
     if (target) Object.assign(target, node);
   }
 
-  const rename = (id, text) => patch(id, { text });
+  // Зміна полів вузла як команда: старі значення знімаються до зміни
+  function patch(id, data, label = 'зміна вузла') {
+    const target = nodes.value.find((n) => n.id === id);
+    const before = Object.fromEntries(Object.keys(data).map((k) => [k, target?.[k] ?? (k === 'collapsed' ? false : null)]));
+    return record({
+      label,
+      do: () => patchRaw(id, data),
+      undo: () => patchRaw(id, before),
+      focusId: () => id,
+      // Ім'я щойно доданого вузла входить у саме додавання: одне скасування знімає обидва кроки
+      mergeInto: (top) => {
+        const onlyText = Object.keys(data).length === 1 && 'text' in data;
+        if (!(onlyText && top?.kind === 'add' && top.rows?.[0]?.id === id)) return false;
+        top.rows[0].text = data.text;
+        return true;
+      },
+    });
+  }
+
+  const rename = (id, text) => patch(id, { text }, 'зміна тексту');
 
   const toggleCollapsed = (id) => {
     const node = nodes.value.find((n) => n.id === id);
-    return patch(id, { collapsed: !node.collapsed });
+    return patch(id, { collapsed: !node.collapsed }, node.collapsed ? 'розгортання гілки' : 'згортання гілки');
   };
 
   async function move(id, parentId, index) {
@@ -140,24 +236,48 @@ export const useMapEditorStore = defineStore('mapEditor', () => {
   }
 
   // Після переміщення в згорнуту гілку розгортаємо її, щоб вузол не зник з очей
-  async function moveAndReveal(id, parentId, index) {
-    await move(id, parentId, index);
+  function moveAndReveal(id, parentId, index) {
+    const node = nodes.value.find((n) => n.id === id);
+    const oldParentId = node.parentId;
+    const oldIndex = siblingIndex(id);
     const parent = nodes.value.find((n) => n.id === parentId);
-    if (parent?.collapsed) await patch(parentId, { collapsed: false });
+    const reveal = !!parent?.collapsed;
+    return record({
+      label: 'переміщення вузла',
+      do: async () => {
+        await move(id, parentId, index);
+        if (reveal) await patchRaw(parentId, { collapsed: false });
+      },
+      undo: async () => {
+        await move(id, oldParentId, oldIndex);
+        if (reveal) await patchRaw(parentId, { collapsed: true });
+      },
+      focusId: () => id,
+    });
   }
 
   // Дублює гілку (Prototype на сервері): копія з'являється одразу після оригіналу
   // і виділяється. Вкладення сервер не копіює.
   async function duplicate(id) {
-    const { nodes: created, changes } = await http.post(`${base()}/${id}/duplicate`);
-    // зсув наступних сусідів застосовуємо до того, як з'являться нові вузли
-    applyChanges(changes.filter((c) => !created.some((n) => n.id === c.id)));
-    for (const n of created) {
-      const change = changes.find((c) => c.id === n.id);
-      nodes.value.push({ ...n, ...(change && { parentId: change.parentId, order: change.order }), attachments: n.attachments ?? [] });
-    }
-    selectedId.value = created[0].id;
-    return created[0];
+    let rows = [];
+    await record({
+      label: 'дублювання гілки',
+      do: async () => {
+        const { nodes: created, changes } = await http.post(`${base()}/${id}/duplicate`);
+        // зсув наступних сусідів застосовуємо до того, як з'являться нові вузли
+        applyChanges(changes.filter((c) => !created.some((n) => n.id === c.id)));
+        for (const n of created) {
+          const change = changes.find((c) => c.id === n.id);
+          nodes.value.push({ ...n, ...(change && { parentId: change.parentId, order: change.order }), attachments: n.attachments ?? [] });
+        }
+        rows = created.map((n) => rowOf(nodes.value.find((r) => r.id === n.id)));
+      },
+      undo: () => removeRaw(rows[0].id),
+      redo: () => restoreRows(rows),
+      focusId: () => rows[0].id,
+    });
+    selectedId.value = rows[0].id;
+    return nodes.value.find((n) => n.id === rows[0].id);
   }
 
   // Вантажить файли по одному; перша помилка зупиняє решту й піднімається вгору,
@@ -205,7 +325,8 @@ export const useMapEditorStore = defineStore('mapEditor', () => {
     boundaries.value = boundaries.value.filter((b) => b.id !== id);
   }
 
-  async function remove(id) {
+  // Без запису в історію
+  async function removeRaw(id) {
     const { deleted, changes } = await http.delete(`${base()}/${id}`);
     const gone = new Set(deleted);
     nodes.value = nodes.value.filter((n) => !gone.has(n.id));
@@ -217,8 +338,33 @@ export const useMapEditorStore = defineStore('mapEditor', () => {
     applyChanges(changes);
   }
 
+  // Видалення гілки як команда: знімок гілки робимо до видалення, з нього її і відновлюємо.
+  // Вкладення (файли) і приналежність до областей не відновлюються.
+  function remove(id) {
+    const rows = branchRows(id);
+    return record({
+      label: 'видалення гілки',
+      do: () => removeRaw(id),
+      undo: () => restoreRows(rows),
+      focusId: () => id,
+    });
+  }
+
+  // ---- скасування і повтор ----
+  async function undo() {
+    const cmd = await history.undo();
+    if (cmd) selectedId.value = nodes.value.some((n) => n.id === cmd.focusId?.()) ? cmd.focusId() : null;
+    return cmd;
+  }
+
+  async function redo() {
+    const cmd = await history.redo();
+    if (cmd) selectedId.value = nodes.value.some((n) => n.id === cmd.focusId?.()) ? cmd.focusId() : null;
+    return cmd;
+  }
+
   return {
     map, nodes, boundaries, error, selectedId, root, layout, theme, selected,
-    load, select, addChild, addChildAndSelect, addSiblingAndSelect, setLayout, setTheme, renameMap, patch, rename, toggleCollapsed, move, moveAndReveal, duplicate, remove, uploadAttachments, removeAttachment, selectedAttachments, attachmentCounts, addBoundaryForBranch, renameBoundary, removeBoundary,
+    load, select, addChild, addChildAndSelect, addSiblingAndSelect, setLayout, setTheme, renameMap, patch, rename, toggleCollapsed, move, moveAndReveal, duplicate, remove, undo, redo, historyState, uploadAttachments, removeAttachment, selectedAttachments, attachmentCounts, addBoundaryForBranch, renameBoundary, removeBoundary,
   };
 });

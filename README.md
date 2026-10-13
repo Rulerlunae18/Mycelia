@@ -82,6 +82,7 @@ npm run dev:client      # http://localhost:5173
 | PATCH | `/api/maps/:id/nodes/:nodeId` | `text`, `collapsed`, `style`, `category` (idea / task / question / info / risk / decision або null), `priority` (low / normal / high / urgent або null) |
 | POST | `/api/maps/:id/nodes/:nodeId/move` | `{ parentId, index? }` → список змінених позицій `{ id, parentId, order }` |
 | GET | `/api/templates` | список шаблонів карт: `{ key, title, description, nodes }` |
+| POST | `/api/maps/:id/nodes/restore` | відновлення гілки з тими самими id і позицією (для «Скасувати») → `{ nodes, changes }` |
 | POST | `/api/maps/:id/nodes/:nodeId/duplicate` | копія гілки з усіма вкладеними одразу після оригіналу → `{ nodes, changes }` |
 | POST | `/api/maps/:id/nodes/:nodeId/attachments?name=&mime=` | тіло: сирі байти файлу (до 25 МБ, до 10 на вузол, до 100 на карту) → опис вкладення |
 | GET | `/api/maps/:id/attachments/:aid/file` | сам файл (картинки й відео inline, підтримується Range; решта лише для завантаження) |
@@ -134,6 +135,7 @@ npm run dev:client      # http://localhost:5173
 | Bridge | `client/src/core/render/`: `MapRenderer` не знає, чим малює; зараз бекенд `SvgSceneBackend`, Canvas можна додати без змін у рендерері (готово) |
 | SOA | `server/src/services/*` (AuthService, MapService, NodeService готові) |
 | Prototype | `server/src/domain/prototype.js`: `NodePrototype.clone()` робить глибоку незалежну копію гілки; нею користуються «дублювати гілку» (прототип з наявної гілки) і карта з шаблону (`TemplateRegistry` віддає копію зразка) (готово) |
+| Command | `client/src/core/history.js`: `History` (invoker зі стеками скасування/повтору) і команди в `stores/mapEditor.js` (додати, видалити, перемістити, дублювати, перейменувати, згорнути) з `do`/`undo`/`redo` (готово) |
 | Abstract Factory | `client/src/core/theme/`: `ThemeFactory` створює узгоджену родину продуктів (стиль вузла, лінії, значка, полотна); конкретні фабрики Ліс, Папір, Океан (готово) |
 
 ## Розкладки
@@ -205,6 +207,16 @@ npm run dev:client      # http://localhost:5173
 код (`server/src/domain/templates.js`); таблиця `Template` у схемі лишилась для можливих
 користувацьких шаблонів, але поки не використовується.
 
+## Скасування і повтор (Command)
+
+Кнопки ↶ ↷ у шапці, Ctrl+Z, Ctrl+Shift+Z / Ctrl+Y (за фізичною клавішею, тож працює й в українській розкладці).
+Кожна дія редактора — об'єкт-команда з `do`/`undo`; `History` лише тримає стеки й нічого не знає про
+вузли. Видалення відновлюється через `POST /nodes/restore` з тими самими id, тому позиція й виділення
+збігаються. Новий вузол і його перша назва зливаються в один крок.
+Обмеження: вкладення й належність до областей при скасуванні видалення не відновлюються; історія
+скидається при завантаженні карти, перемиканні вкладки й перезавантаженні; розкладка, тема, області
+та вкладення не скасовуються.
+
 ## Що далі
 
 1. ~~Редагування вузлів~~ (готово: API, сховище `mapEditor`, правка в списку).
@@ -215,5 +227,5 @@ npm run dev:client      # http://localhost:5173
 2b. ~~Вкладки карт~~ (готово).
 2a. ~~Значки категорій і терміновості, теми (Abstract Factory)~~ (готово).
 3. ~~Перетягування вузлів мишею~~ (готово). Правка тексту на полотні і гарячі клавіші теж готові.
-4. Undo/redo, вкладки карт.
+4. ~~Undo/redo (Command)~~ (готово).
 5. Вкладення (`FileService` + Supabase Storage), значки категорій і терміновості, області.

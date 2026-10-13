@@ -258,4 +258,149 @@ describe('mapEditor store', () => {
     store.map.theme = 'ocean';
     expect(store.theme).toBe('ocean');
   });
+
+  describe('скасування і повтор (Command)', () => {
+    it('зміна тексту скасовується і повторюється зі старим і новим значенням', async () => {
+      http.patch.mockImplementation(async (_url, data) => ({ node: { id: 'a', ...data } }));
+      await store.rename('a', 'Нова');
+      expect(store.root.find('a').text).toBe('Нова');
+      expect(store.historyState).toMatchObject({ canUndo: true, canRedo: false, undoLabel: 'зміна тексту' });
+
+      await store.undo();
+      expect(store.root.find('a').text).toBe('A');
+      expect(http.patch).toHaveBeenLastCalledWith('/maps/m1/nodes/a', { text: 'A' });
+      expect(store.historyState).toMatchObject({ canUndo: false, canRedo: true });
+
+      await store.redo();
+      expect(store.root.find('a').text).toBe('Нова');
+    });
+
+    it('скасування видалення відновлює гілку: запит йде від батька до дітей, з тими самими id', async () => {
+      http.delete.mockResolvedValue({ deleted: ['a', 'a1'], changes: [{ id: 'b', parentId: 'r', order: 0 }] });
+      await store.remove('a');
+      expect(store.root.find('a')).toBeNull();
+
+      http.post.mockImplementation(async (_url, body) => ({
+        nodes: body.nodes.map((n) => ({ ...n, mapId: 'm1' })),
+        changes: [{ id: 'a', parentId: 'r', order: 0 }, { id: 'b', parentId: 'r', order: 1 }],
+      }));
+      await store.undo();
+      const [, body] = http.post.mock.calls.at(-1);
+      expect(http.post.mock.calls.at(-1)[0]).toBe('/maps/m1/nodes/restore');
+      expect(body.nodes.map((n) => n.id)).toEqual(['a', 'a1']);
+      expect(body.nodes[1].parentId).toBe('a');
+      expect(store.root.children.map((c) => c.id)).toEqual(['a', 'b']);
+      expect(store.root.find('a1').parent.id).toBe('a');
+      expect(store.selectedId).toBe('a');
+
+      await store.redo(); // повторне видалення
+      expect(store.root.find('a')).toBeNull();
+    });
+
+    it('додавання скасовується видаленням нового вузла, а повтор відновлює його з тим самим id', async () => {
+      http.post.mockResolvedValue({ node: row('n', 'r', 'Нова ідея', 2) });
+      await store.addChildAndSelect('r');
+      expect(store.root.find('n')).not.toBeNull();
+
+      http.delete.mockResolvedValue({ deleted: ['n'], changes: [] });
+      await store.undo();
+      expect(http.delete).toHaveBeenLastCalledWith('/maps/m1/nodes/n');
+      expect(store.root.find('n')).toBeNull();
+      expect(store.selectedId).toBeNull();
+
+      http.post.mockImplementation(async (_url, body) => ({ nodes: body.nodes, changes: [{ id: 'n', parentId: 'r', order: 2 }] }));
+      await store.redo();
+      expect(store.root.find('n')).not.toBeNull();
+      expect(http.post.mock.calls.at(-1)[1].nodes[0].id).toBe('n');
+    });
+
+    it('ім\'я щойно доданого вузла входить у додавання: одне скасування прибирає вузол, повтор вертає з іменем', async () => {
+      http.post.mockResolvedValue({ node: row('n', 'r', 'Нова ідея', 2) });
+      http.patch.mockImplementation(async (_u, data) => ({ node: { id: 'n', ...data } }));
+      await store.addChildAndSelect('r');
+      await store.rename('n', 'Моя ідея');
+      expect(store.root.find('n').text).toBe('Моя ідея');
+
+      http.delete.mockResolvedValue({ deleted: ['n'], changes: [] });
+      await store.undo();
+      expect(store.root.find('n')).toBeNull();
+      expect(store.historyState.canUndo).toBe(false);
+
+      http.post.mockImplementation(async (_u, body) => ({ nodes: body.nodes, changes: [{ id: 'n', parentId: 'r', order: 2 }] }));
+      await store.redo();
+      expect(store.root.find('n').text).toBe('Моя ідея');
+    });
+
+    it('перейменування звичайного (не щойно доданого) вузла окремий крок', async () => {
+      http.post.mockResolvedValue({ node: row('n', 'r', 'Нова ідея', 2) });
+      http.patch.mockImplementation(async (_u, data) => ({ node: { id: 'a', ...data } }));
+      await store.addChildAndSelect('r');
+      await store.rename('a', 'Інший вузол');
+      await store.undo();
+      expect(store.root.find('a').text).toBe('A');
+      expect(store.root.find('n')).not.toBeNull(); // додавання не скасоване
+    });
+
+    it('додавання в згорнуту гілку: скасування знову згортає її', async () => {
+      store.nodes.find((n) => n.id === 'b').collapsed = true;
+      http.post.mockResolvedValue({ node: row('n', 'b', 'Нова ідея', 0) });
+      http.patch.mockImplementation(async (_u, data) => ({ node: { id: 'b', ...data } }));
+      await store.addChildAndSelect('b');
+      expect(store.root.find('b').collapsed).toBe(false);
+
+      http.delete.mockResolvedValue({ deleted: ['n'], changes: [] });
+      await store.undo();
+      expect(store.root.find('b').collapsed).toBe(true);
+    });
+
+    it('переміщення скасовується поверненням на старого батька і старе місце', async () => {
+      http.post.mockResolvedValue({ changes: [{ id: 'a', parentId: 'b', order: 0 }, { id: 'b', parentId: 'r', order: 0 }] });
+      await store.moveAndReveal('a', 'b', 0);
+      expect(store.root.find('a').parent.id).toBe('b');
+
+      http.post.mockResolvedValue({ changes: [{ id: 'a', parentId: 'r', order: 0 }, { id: 'b', parentId: 'r', order: 1 }] });
+      await store.undo();
+      expect(http.post).toHaveBeenLastCalledWith('/maps/m1/nodes/a/move', { parentId: 'r', index: 0 });
+      expect(store.root.children.map((c) => c.id)).toEqual(['a', 'b']);
+    });
+
+    it('дублювання скасовується видаленням копії, повтор відновлює її', async () => {
+      http.post.mockResolvedValue({
+        nodes: [row('a-copy', 'r', 'A (копія)', 1)],
+        changes: [{ id: 'a', parentId: 'r', order: 0 }, { id: 'a-copy', parentId: 'r', order: 1 }, { id: 'b', parentId: 'r', order: 2 }],
+      });
+      await store.duplicate('a');
+      http.delete.mockResolvedValue({ deleted: ['a-copy'], changes: [{ id: 'a', parentId: 'r', order: 0 }, { id: 'b', parentId: 'r', order: 1 }] });
+      await store.undo();
+      expect(store.root.children.map((c) => c.id)).toEqual(['a', 'b']);
+
+      http.post.mockImplementation(async (_u, body) => ({
+        nodes: body.nodes,
+        changes: [{ id: 'a', parentId: 'r', order: 0 }, { id: 'a-copy', parentId: 'r', order: 1 }, { id: 'b', parentId: 'r', order: 2 }],
+      }));
+      await store.redo();
+      expect(store.root.children.map((c) => c.id)).toEqual(['a', 'a-copy', 'b']);
+    });
+
+    it('нова дія очищає повтор, а завантаження іншої карти очищає всю історію', async () => {
+      http.patch.mockImplementation(async (_u, data) => ({ node: { id: 'a', ...data } }));
+      await store.rename('a', 'X');
+      await store.undo();
+      await store.rename('a', 'Y');
+      expect(store.historyState.canRedo).toBe(false);
+
+      http.get.mockResolvedValue({ map: { id: 'm2', title: 'Інша', layout: 'tree', nodes: [row('r2', null, 'R')] } });
+      await store.load('m2');
+      expect(store.historyState).toMatchObject({ canUndo: false, canRedo: false });
+    });
+
+    it('якщо відновлення не вдалось, історія лишається (можна повторити спробу)', async () => {
+      http.delete.mockResolvedValue({ deleted: ['b'], changes: [] });
+      await store.remove('b');
+      http.post.mockRejectedValue(new Error('сервер недоступний'));
+      await expect(store.undo()).rejects.toThrow('сервер недоступний');
+      expect(store.historyState.canUndo).toBe(true);
+      expect(store.root.find('b')).toBeNull();
+    });
+  });
 });

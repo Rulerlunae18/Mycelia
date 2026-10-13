@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { createNodeSchema, moveNodeSchema, parse, updateNodeSchema } from '../validation.js';
+import { createNodeSchema, moveNodeSchema, parse, restoreNodesSchema, updateNodeSchema } from '../validation.js';
 
 // Монтується на /api/maps/:mapId/nodes
 export function nodeRoutes({ nodeService, requireAuth }) {
@@ -11,6 +11,15 @@ export function nodeRoutes({ nodeService, requireAuth }) {
       const data = parse(createNodeSchema, req.body);
       const node = await nodeService.create(req.userId, req.params.mapId, data);
       res.status(201).json({ node });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.post('/restore', async (req, res, next) => {
+    try {
+      const { nodes } = parse(restoreNodesSchema, req.body);
+      res.status(201).json(await nodeService.restore(req.userId, req.params.mapId, nodes));
     } catch (err) {
       next(err);
     }

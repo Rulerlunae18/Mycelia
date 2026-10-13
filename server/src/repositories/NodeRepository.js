@@ -12,9 +12,12 @@ export class NodeRepository {
   }
 
   // Масове створення вузлів із готовими id (спершу батьки, потім діти) однією транзакцією
+  // style: null опускаємо: Prisma не приймає звичайний null у JSON-полі (потрібен Prisma.JsonNull),
+  // а відсутнє поле і так збережеться як NULL.
   async createMany(rows) {
     if (!rows.length) return [];
-    await this.prisma.$transaction([this.prisma.node.createMany({ data: rows })]);
+    const data = rows.map(({ style, ...rest }) => (style == null ? rest : { ...rest, style }));
+    await this.prisma.$transaction([this.prisma.node.createMany({ data })]);
     return rows.map((r) => ({ ...r, attachments: [] }));
   }
 
