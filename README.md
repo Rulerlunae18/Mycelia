@@ -79,7 +79,7 @@ npm run dev:client      # http://localhost:5173
 | PATCH | `/api/maps/:id` | зміна назви, теми (forest / paper / ocean), розкладки |
 | DELETE | `/api/maps/:id` | видалення |
 | POST | `/api/maps/:id/nodes` | `{ parentId, text?, index? }` → новий вузол (index — позиція серед сусідів) |
-| PATCH | `/api/maps/:id/nodes/:nodeId` | `text`, `collapsed`, `style`, `category` (idea / task / question / info / risk / decision або null), `priority` (low / normal / high / urgent або null) |
+| PATCH | `/api/maps/:id/nodes/:nodeId` | `text`, `collapsed`, `style`, `category` (idea / task / question / info / risk / decision або null), `priority` (low / normal / high / urgent або null), `note` (довга нотатка до 10000 символів, порожня = null) |
 | POST | `/api/maps/:id/nodes/:nodeId/move` | `{ parentId, index? }` → список змінених позицій `{ id, parentId, order }` |
 | GET | `/api/templates` | список шаблонів карт: `{ key, title, description, nodes }` |
 | POST | `/api/maps/:id/nodes/restore` | відновлення гілки з тими самими id і позицією (для «Скасувати») → `{ nodes, changes }` |
@@ -177,6 +177,15 @@ npm run dev:client      # http://localhost:5173
 (`core/boundary.js`), колір дає фабрика теми. Згорнута гілка просто не впливає на контур,
 видалений вузол сам зникає з області, а порожня область видаляється. Склад області не
 змінюється, коли вузли переносять: вона описує групу, а не місце на полотні.
+
+## Нотатки до вузлів
+
+До вузла можна прикріпити довгий текст (до 10000 символів), якщо ідея не влазить у саму комірку.
+Панель «Нотатка» з'являється під полотном для вибраного вузла і зберігає текст сама: через
+1,2 с після друку, при виході з поля і при зміні вузла. На вузлі з нотаткою є значок сторінки.
+Нотатка входить у історію (Ctrl+Z): правки одного вузла протягом 10 с зливаються в один крок.
+Вона копіюється разом із гілкою (дублювання, шаблони) і відновлюється при скасуванні видалення.
+Потрібна міграція БД: `npm run prisma:migrate -w server` (додає колонку `Node.note`).
 
 ## Вкладення
 

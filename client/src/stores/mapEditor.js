@@ -81,7 +81,7 @@ export const useMapEditorStore = defineStore('mapEditor', () => {
   // ---- знімки для команд ----
   const rowOf = (n) => ({
     id: n.id, parentId: n.parentId, text: n.text, collapsed: !!n.collapsed,
-    style: n.style ?? null, category: n.category ?? null, priority: n.priority ?? null, order: n.order,
+    style: n.style ?? null, category: n.category ?? null, priority: n.priority ?? null, note: n.note ?? null, order: n.order,
   });
 
   // Гілка від батька до дітей (так її приймає сервер при відновленні)
@@ -221,6 +221,31 @@ export const useMapEditorStore = defineStore('mapEditor', () => {
         return true;
       },
     });
+  }
+
+  // Нотатка вузла: розгорнутий опис, що не влазить у сам вузол. Послідовні правки однієї
+  // нотатки протягом кількох секунд (автозбереження під час друку) зливаються в один крок історії.
+  const NOTE_MERGE_MS = 10000;
+  function setNote(id, note) {
+    const target = nodes.value.find((n) => n.id === id);
+    const after = note && note.trim() ? note : null;
+    const before = target?.note ?? null;
+    if (!target || after === before) return Promise.resolve();
+    const cmd = {
+      kind: 'note', id, before, after, at: Date.now(),
+      label: 'зміна нотатки',
+      do: () => patchRaw(id, { note: cmd.after }),
+      undo: () => patchRaw(id, { note: cmd.before }),
+      redo: () => patchRaw(id, { note: cmd.after }),
+      focusId: () => id,
+      mergeInto: (top) => {
+        if (!(top?.kind === 'note' && top.id === id && Date.now() - top.at < NOTE_MERGE_MS)) return false;
+        top.after = after;
+        top.at = Date.now();
+        return true;
+      },
+    };
+    return record(cmd);
   }
 
   const rename = (id, text) => patch(id, { text }, 'зміна тексту');
@@ -365,6 +390,6 @@ export const useMapEditorStore = defineStore('mapEditor', () => {
 
   return {
     map, nodes, boundaries, error, selectedId, root, layout, theme, selected,
-    load, select, addChild, addChildAndSelect, addSiblingAndSelect, setLayout, setTheme, renameMap, patch, rename, toggleCollapsed, move, moveAndReveal, duplicate, remove, undo, redo, historyState, uploadAttachments, removeAttachment, selectedAttachments, attachmentCounts, addBoundaryForBranch, renameBoundary, removeBoundary,
+    load, select, addChild, addChildAndSelect, addSiblingAndSelect, setLayout, setTheme, renameMap, patch, setNote, rename, toggleCollapsed, move, moveAndReveal, duplicate, remove, undo, redo, historyState, uploadAttachments, removeAttachment, selectedAttachments, attachmentCounts, addBoundaryForBranch, renameBoundary, removeBoundary,
   };
 });

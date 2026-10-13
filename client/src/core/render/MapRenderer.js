@@ -79,6 +79,7 @@ export class MapRenderer {
         style: node.extra.style ?? null,
         look: factory.createNodeStyle({ isRoot: node.isRoot, selected: node.id === selectedId }),
         attachmentCount: attachmentCounts[node.id] ?? 0,
+        hasNote: !!node.extra.note,
         inset: category ? CATEGORY_INSET : 0,
         marks: {
           category: category && { ...category, ...factory.createMarkStyle('category', category.key) },

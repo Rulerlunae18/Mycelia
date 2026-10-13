@@ -178,4 +178,14 @@ describe('SvgSceneBackend', () => {
     expect(scene.nodes.find((n) => n.id === 'a').attachmentCount).toBe(3);
     expect(scene.nodes.find((n) => n.id === 'b').attachmentCount).toBe(0);
   });
+
+  it('позначає вузли, до яких прикріплено нотатку', () => {
+    const root = new TreeNode({ id: 'r', text: 'R' });
+    root.add(new TreeNode({ id: 'a', text: 'A', note: 'розгорнутий опис' }));
+    root.add(new TreeNode({ id: 'b', text: 'B', note: null }));
+    const scene = new MapRenderer(new SvgSceneBackend()).render(root, {});
+    expect(scene.nodes.find((n) => n.id === 'a').hasNote).toBe(true);
+    expect(scene.nodes.find((n) => n.id === 'b').hasNote).toBe(false);
+    expect(scene.nodes.find((n) => n.id === 'r').hasNote).toBe(false);
+  });
 });

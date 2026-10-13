@@ -319,6 +319,11 @@ defineExpose({ fit, edit, toggleFullscreen });
             <path d="M8 3.5h3.5l2 2V11H8z" />
             <text x="22" y="8">{{ n.attachmentCount }}</text>
           </g>
+          <g v-if="n.hasNote" class="note-mark" :transform="`translate(8 ${n.rect.height - 7})`">
+            <title>Є нотатка</title>
+            <rect width="16" height="15" rx="4" />
+            <path d="M4.5 5h7M4.5 7.7h7M4.5 10.4h4.5" />
+          </g>
           <g v-if="n.collapsed" class="badge" :transform="`translate(${n.rect.width - 6} ${-8})`">
             <rect :width="badgeWidth(n.hiddenCount)" height="18" rx="9" />
             <text :x="badgeWidth(n.hiddenCount) / 2" y="9">+{{ n.hiddenCount }}</text>
@@ -380,9 +385,11 @@ defineExpose({ fit, edit, toggleFullscreen });
 .node rect { fill: var(--n-fill); stroke: var(--n-stroke); stroke-width: var(--n-sw); transition: stroke 0.12s; }
 .node .label { fill: var(--n-ink); font-size: var(--n-fs); font-weight: var(--n-fw); text-anchor: middle; dominant-baseline: central; pointer-events: none; }
 .node:hover rect, .node:focus-visible rect { stroke: var(--c-accent); }
-.clip { pointer-events: none; }
+.clip, .note-mark { pointer-events: none; }
 .clip rect { fill: var(--c-bg); stroke: var(--c-accent); stroke-width: 1.2; }
 .clip path { fill: none; stroke: var(--c-accent); stroke-width: 1.2; stroke-linejoin: round; }
+.note-mark rect { fill: var(--c-bg); stroke: var(--c-accent); stroke-width: 1.2; }
+.note-mark path { fill: none; stroke: var(--c-accent); stroke-width: 1.2; stroke-linecap: round; }
 .clip text { fill: var(--c-accent); font-size: 10px; font-weight: 700; text-anchor: middle; dominant-baseline: central; }
 .mark { pointer-events: none; }
 .mark text { font-size: 11px; font-weight: 700; text-anchor: middle; dominant-baseline: central; }
