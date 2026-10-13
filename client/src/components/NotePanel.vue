@@ -46,7 +46,7 @@ onBeforeUnmount(() => flush());
 </script>
 
 <template>
-  <section class="panel card" aria-label="Нотатка до вузла">
+  <section class="card" aria-label="Нотатка до вузла">
     <header>
       <h2>Нотатка: <span class="muted">{{ nodeTitle || 'без тексту' }}</span></h2>
       <span class="status muted" aria-live="polite">{{ dirty ? 'Зберігається…' : draft ? 'Збережено' : '' }}</span>
@@ -66,16 +66,18 @@ onBeforeUnmount(() => flush());
 </template>
 
 <style scoped>
-.panel { margin-top: 16px; }
 header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-h2 { margin: 0; font-size: 1rem; }
+h2 { margin: 0; font-family: var(--serif); font-size: 1.5rem; font-weight: 600; color: var(--ink); line-height: 1.2; }
+h2 .muted { font-style: italic; font-weight: 500; color: var(--soft); }
 .status { font-size: 0.85rem; }
 .note {
-  display: block; width: 100%; margin-top: 10px; padding: 10px 12px; box-sizing: border-box; resize: vertical;
-  min-height: 7em; max-height: 60vh; font: inherit; line-height: 1.5; color: var(--text);
-  background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px;
+  display: block; width: 100%; margin-top: 12px; padding: 12px 14px; box-sizing: border-box; resize: vertical;
+  min-height: 8em; max-height: 60vh; font: inherit; line-height: 1.55; color: var(--ink);
+  background: rgba(8, 16, 12, 0.55); border: 1px solid var(--line); border-radius: 12px;
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
 }
-.note:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+.note::placeholder { color: rgba(180, 207, 191, 0.45); }
+.note:focus { outline: none; border-color: rgba(126, 224, 164, 0.6); background: rgba(8, 16, 12, 0.8); box-shadow: 0 0 0 3px rgba(126, 224, 164, 0.12); }
 .count { margin: 6px 0 0; font-size: 0.8rem; text-align: right; }
 .count.near { color: var(--danger); }
 </style>

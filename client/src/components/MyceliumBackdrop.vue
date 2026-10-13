@@ -1,6 +1,9 @@
 <script setup>
 // Фон екрана входу: нитки грибниці й світлові імпульси, що біжать по них від коренів до кінчиків.
 import { onBeforeUnmount, onMounted, ref } from 'vue';
+
+// calm: тихіший фон для робочих екранів (менше імпульсів, ледь помітні нитки)
+const props = defineProps({ calm: { type: Boolean, default: false } });
 import { growNetwork, makeRng, pickRoute, pointAt } from '../core/mycelium';
 
 const canvas = ref(null);
@@ -69,7 +72,7 @@ function draw(dt) {
   ctx.drawImage(still, 0, 0, width, height);
   if (reduced) return;
 
-  const wanted = Math.min(12, Math.max(4, Math.round(width / 130)));
+  const wanted = props.calm ? 2 : Math.min(12, Math.max(4, Math.round(width / 130)));
   if (pulses.length < wanted && rng() < dt * 1.6) spawn();
 
   ctx.globalCompositeOperation = 'lighter';
@@ -129,7 +132,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <canvas ref="canvas" class="backdrop" aria-hidden="true" />
+  <canvas ref="canvas" class="backdrop" :class="{ calm }" aria-hidden="true" />
 </template>
 
 <style scoped>
@@ -137,6 +140,8 @@ onBeforeUnmount(() => {
   position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none;
   animation: grow-in 1.6s ease-out both;
 }
+/* на робочих екранах фон лише натякає на грибницю: не відволікає від карти */
+.backdrop.calm { opacity: 0.5; animation: none; }
 @keyframes grow-in { from { opacity: 0; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .backdrop { animation: none; } }
 </style>

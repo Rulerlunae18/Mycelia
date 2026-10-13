@@ -368,10 +368,11 @@ defineExpose({ fit, edit, toggleFullscreen });
 <style scoped>
 .canvas {
   position: relative;
-  height: clamp(460px, calc(100vh - 240px), 900px);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  height: clamp(460px, calc(100vh - 300px), 900px);
+  border: 1px solid rgba(126, 224, 164, 0.3);
+  border-radius: 18px;
   overflow: hidden;
+  box-shadow: 0 0 0 1px rgba(126, 224, 164, 0.05), 0 24px 60px rgba(0, 0, 0, 0.45);
 }
 .canvas:fullscreen { height: 100vh; border: 0; border-radius: 0; }
 .surface { width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; user-select: none; }
@@ -407,5 +408,8 @@ defineExpose({ fit, edit, toggleFullscreen });
   position: absolute; box-sizing: border-box; padding: 0 14px; text-align: center;
   background: var(--c-bg); color: var(--c-ink); border: 2px solid var(--c-accent); border-radius: 999px; outline: none;
 }
-.controls { position: absolute; right: 12px; bottom: 12px; display: flex; gap: 6px; }
+.controls {
+  position: absolute; right: 12px; bottom: 12px; display: flex; gap: 6px; padding: 6px;
+  background: rgba(15, 23, 19, 0.72); backdrop-filter: blur(8px); border: 1px solid var(--line); border-radius: 14px;
+}
 </style>
