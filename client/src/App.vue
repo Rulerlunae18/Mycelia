@@ -61,7 +61,7 @@ async function logout() {
 /* контент шапки вирівняний по тій самій колонці, що й сторінка карт */
 .bar {
   display: flex; align-items: center; justify-content: space-between;
-  max-width: none; height: 62px; margin: 0 auto; padding: 0 240px;
+  max-width: none; height: 62px; margin: 0 auto; padding: 0 max(16px, calc((100% - 820px) / 2));
 }
  
 /* ── Логотип: той самий Kaushan Script зі світінням, що на екрані входу ── */

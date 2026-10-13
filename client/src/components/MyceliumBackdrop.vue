@@ -13,6 +13,7 @@ let width = 0;
 let height = 0;
 let dpr = 1;
 let observer = null;
+let resizeTimer = 0;
 const rng = makeRng(Date.now() % 100000);
 const reduced = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -41,6 +42,7 @@ function paintStill() {
 }
 
 function rebuild() {
+  if (!canvas.value) return; // компонент уже прибрано
   const box = canvas.value.getBoundingClientRect();
   width = Math.max(1, box.width);
   height = Math.max(1, box.height);
@@ -114,14 +116,14 @@ onMounted(() => {
   if (!canvas.value?.getContext || !document.createElement('canvas').getContext('2d')) return; // jsdom і старі браузери
   rebuild();
   if (typeof ResizeObserver !== 'undefined') {
-    let timer = 0;
-    observer = new ResizeObserver(() => { clearTimeout(timer); timer = setTimeout(rebuild, 150); });
+    observer = new ResizeObserver(() => { clearTimeout(resizeTimer); resizeTimer = setTimeout(rebuild, 150); });
     observer.observe(canvas.value);
   }
   if (!reduced) raf = requestAnimationFrame(frame);
 });
 onBeforeUnmount(() => {
   cancelAnimationFrame(raf);
+  clearTimeout(resizeTimer);
   observer?.disconnect();
 });
 </script>
