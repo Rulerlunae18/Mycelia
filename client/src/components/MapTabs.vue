@@ -35,6 +35,7 @@ function commit() {
       :class="{ active: t.id === activeId }"
       @auxclick.middle.prevent="emit('close', t.id)"
     >
+      <i class="bud" aria-hidden="true" />
       <input
         v-if="editing?.id === t.id"
         v-model="editing.text"
@@ -60,15 +61,37 @@ function commit() {
 </template>
 
 <style scoped>
-.tabs { display: flex; flex-wrap: wrap; align-items: stretch; gap: 4px; margin-bottom: 14px; }
-.tab { display: inline-flex; align-items: center; max-width: 220px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
-.tab.active { background: var(--surface-2); border-color: var(--accent); }
-.title { padding: 6px 4px 6px 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: 0.9rem; }
-.title:hover { text-decoration: none; color: var(--text); }
-.active .title { color: var(--text); font-weight: 600; }
-.close { border: 0; background: transparent; color: var(--muted); cursor: pointer; padding: 6px 10px 6px 4px; font-size: 0.75rem; }
-.close:hover { color: var(--danger); }
-.tab-input { font: inherit; font-size: 0.9rem; width: 160px; margin: 3px 6px 3px 8px; padding: 2px 6px; color: var(--text); background: var(--bg); border: 1px solid var(--accent); border-radius: 6px; outline: none; }
-.add { display: inline-flex; align-items: center; padding: 0 12px; border: 1px dashed var(--border); border-radius: 10px; color: var(--muted); }
-.add:hover { text-decoration: none; color: var(--accent); border-color: var(--accent); }
+.tabs { display: flex; flex-wrap: wrap; align-items: stretch; gap: 8px; margin-bottom: 22px; }
+.tab {
+  position: relative; display: inline-flex; align-items: center; max-width: 240px; padding-left: 12px;
+  background: rgba(20, 32, 26, 0.6); backdrop-filter: blur(8px);
+  border: 1px solid var(--line); border-radius: 12px;
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+}
+.tab:hover { border-color: rgba(126, 224, 164, 0.45); }
+/* «бруньки» на нитці: у активної вкладки світиться */
+.bud { flex: none; width: 7px; height: 7px; border-radius: 50%; border: 1.5px solid rgba(126, 224, 164, 0.55); background: #0f1713; transition: background 0.25s, box-shadow 0.25s; }
+.tab.active { background: rgba(26, 42, 34, 0.9); border-color: rgba(126, 224, 164, 0.6); box-shadow: 0 0 18px rgba(126, 224, 164, 0.12); }
+.tab.active .bud { background: var(--glow); border-color: var(--glow); box-shadow: 0 0 10px var(--glow); }
+.tab.active::after {
+  content: ''; position: absolute; left: 14px; right: 14px; bottom: -1px; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--glow), transparent);
+}
+.title {
+  padding: 8px 4px 8px 9px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-family: var(--serif); font-size: 1.15rem; font-weight: 600; line-height: 1.2; color: var(--soft);
+}
+.title:hover { text-decoration: none; color: var(--ink); }
+.active .title { color: var(--ink); }
+.close { border: 0; background: transparent; color: var(--muted); cursor: pointer; padding: 8px 11px 8px 5px; font-size: 0.72rem; border-radius: 10px; transition: color 0.2s; }
+.close:hover { color: #ff9f90; }
+.tab-input {
+  font: inherit; font-family: var(--serif); font-size: 1.1rem; font-weight: 600; width: 170px; margin: 4px 6px 4px 8px; padding: 2px 8px;
+  color: var(--ink); background: rgba(8, 16, 12, 0.7); border: 1px solid var(--glow); border-radius: 8px; outline: none;
+}
+.add {
+  display: inline-flex; align-items: center; padding: 0 15px; font-size: 1.1rem; color: var(--muted);
+  border: 1px dashed rgba(126, 224, 164, 0.35); border-radius: 12px; transition: color 0.2s, border-color 0.2s, background 0.2s;
+}
+.add:hover { text-decoration: none; color: var(--glow); border-color: var(--glow); background: rgba(126, 224, 164, 0.07); }
 </style>
