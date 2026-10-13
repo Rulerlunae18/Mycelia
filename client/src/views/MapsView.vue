@@ -3,7 +3,6 @@ import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { http } from '../api/http';
 import { useTabsStore } from '../stores/tabs';
-// Выходим из папки views и заходим в components
 import MyceliumBackdrop from '../components/MyceliumBackdrop.vue';
  
 const router = useRouter();
@@ -245,7 +244,7 @@ onMounted(load);
   content: '';
   position: fixed;
   inset: 0;
-  z-index: -1; /* над мицелием, под контентом */
+  z-index: -1; /* над мицелієм, під вмістом */
   pointer-events: none;
   background: radial-gradient(
     ellipse 55% 75% at 50% 45%,
@@ -331,7 +330,7 @@ onMounted(load);
 /* ── Список: карти ростуть гілками з однієї нитки ── */
 .list {
   position: relative; list-style: none; margin: 0; padding: 0 0 0 var(--pad);
-  display: grid; gap: 14px;
+  display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; /* minmax(0,…): довга назва не розпирає список */
 }
 /* нитка тягнеться від форми вниз і розчиняється */
 .list::before {

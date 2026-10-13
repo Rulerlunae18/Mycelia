@@ -54,6 +54,7 @@ function fit() {
 let observer = null;
 onMounted(async () => {
   await nextTick();
+  if (!host.value) return; // компонент встигли прибрати, поки чекали
   fit();
   if (typeof ResizeObserver !== 'undefined') {
     observer = new ResizeObserver(measure);
