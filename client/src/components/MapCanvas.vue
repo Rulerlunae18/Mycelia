@@ -16,7 +16,7 @@ const props = defineProps({
   boundaries: { type: Array, default: () => [] },
   attachmentCounts: { type: Object, default: () => ({}) },
 });
-const emit = defineEmits(['select', 'toggle', 'move', 'rename', 'add-child', 'add-sibling', 'remove']);
+const emit = defineEmits(['select', 'toggle', 'move', 'rename', 'add-child', 'add-sibling', 'remove', 'undo', 'redo']);
 
 const renderer = new MapRenderer(new SvgSceneBackend());
 const scene = computed(() =>
@@ -214,7 +214,14 @@ function cancelEdit() {
 
 // ---- гарячі клавіші (як у XMind) ----
 function onKeydown(e) {
-  if (editing.value || e.ctrlKey || e.metaKey || e.altKey) return;
+  if (editing.value) return;
+  // Скасування і повтор. Беремо фізичну клавішу (code), щоб працювало і на українській розкладці.
+  if ((e.ctrlKey || e.metaKey) && !e.altKey) {
+    if (e.code === 'KeyZ') { e.preventDefault(); emit(e.shiftKey ? 'redo' : 'undo'); }
+    else if (e.code === 'KeyY') { e.preventDefault(); emit('redo'); }
+    return;
+  }
+  if (e.altKey) return;
   const id = props.selectedId;
   if (e.key === 'Escape') return emit('select', null);
   if (!id) return;

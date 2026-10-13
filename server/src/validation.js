@@ -56,6 +56,26 @@ export const updateNodeSchema = z
   })
   .refine((v) => Object.keys(v).length > 0, 'Немає полів для оновлення');
 
+// Відновлення вузлів з відомими id (скасування видалення, повтор додавання).
+// Рядки йдуть від батька до дітей; перший рядок це корінь відновлюваної гілки.
+export const restoreNodesSchema = z.object({
+  nodes: z
+    .array(
+      z.object({
+        id: z.string().min(1).max(64),
+        parentId: z.string().min(1).max(64),
+        text: nodeText,
+        collapsed: z.boolean().default(false),
+        style: styleSchema.nullable().default(null),
+        category: z.enum(CATEGORIES).nullable().default(null),
+        priority: z.enum(PRIORITIES).nullable().default(null),
+        order: z.number().int().min(0),
+      }),
+    )
+    .min(1)
+    .max(2000),
+});
+
 export const moveNodeSchema = z.object({
   parentId: z.string().min(1).max(64),
   index: z.number().int().min(0).optional(),

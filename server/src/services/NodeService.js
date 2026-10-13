@@ -80,6 +80,35 @@ export class NodeService {
     return changes;
   }
 
+  // Повертає гілку з тими самими id (скасування видалення, повтор додавання).
+  // rows: від батька до дітей; перший рядок це корінь гілки, його батько вже має бути на карті.
+  async restore(ownerId, mapId, rows) {
+    const nodes = await this.#load(ownerId, mapId);
+    if (nodes.length + rows.length > MAX_NODES_PER_MAP) {
+      throw badRequest(`Ліміт вузлів на карті: ${MAX_NODES_PER_MAP}`);
+    }
+    const existing = new Set(nodes.map((n) => n.id));
+    const batch = new Set();
+    rows.forEach((row, i) => {
+      if (existing.has(row.id) || batch.has(row.id)) throw badRequest('Вузол з таким id уже існує');
+      const parentOk = i === 0 ? existing.has(row.parentId) : batch.has(row.parentId);
+      if (!parentOk) throw badRequest(i === 0 ? 'Батьківський вузол не знайдено' : 'Вузли мають іти від батька до дітей');
+      batch.add(row.id);
+    });
+
+    const [head] = rows;
+    const created = await this.nodes.createMany(rows.map((r) => ({ ...r, mapId })));
+    // Корінь гілки стає на своє місце серед сусідів, решта сусідів зсуваються
+    const siblings = childrenOf(nodes, head.parentId).map((n) => n.id);
+    const changes = reindex(insertAt(siblings, head.id, head.order), head.parentId);
+    await this.nodes.saveOrder(changes);
+    await this.maps.touch(mapId);
+    return {
+      nodes: created.map((n) => ({ ...n, order: changes.find((c) => c.id === n.id)?.order ?? n.order })),
+      changes,
+    };
+  }
+
   // Дублює гілку (Prototype): гілка стає прототипом, копія з'являється одразу після оригіналу.
   // Вкладення не копіюються (файли не розмножуємо), області теж.
   async duplicate(ownerId, mapId, nodeId) {

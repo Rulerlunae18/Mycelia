@@ -120,6 +120,19 @@ function removeSelected(id = store.selectedId) {
         </select>
       </label>
 
+      <div class="seg" role="group" aria-label="Історія">
+        <button
+          class="btn btn-small" :disabled="!store.historyState.canUndo"
+          :title="store.historyState.canUndo ? `Скасувати: ${store.historyState.undoLabel} (Ctrl+Z)` : 'Нічого скасовувати'"
+          aria-label="Скасувати" @click="run(() => store.undo())"
+        >↶</button>
+        <button
+          class="btn btn-small" :disabled="!store.historyState.canRedo"
+          :title="store.historyState.canRedo ? `Повторити: ${store.historyState.redoLabel} (Ctrl+Shift+Z)` : 'Нічого повторювати'"
+          aria-label="Повторити" @click="run(() => store.redo())"
+        >↷</button>
+      </div>
+
       <span class="muted count">вузлів: {{ store.root?.size() }}</span>
 
       <div class="selection">
@@ -164,11 +177,13 @@ function removeSelected(id = store.selectedId) {
       @add-child="addChild"
       @add-sibling="addSibling"
       @remove="removeSelected"
+      @undo="run(() => store.undo())"
+      @redo="run(() => store.redo())"
       @move="({ id, parentId, index }) => run(() => store.moveAndReveal(id, parentId, index))"
     />
     <p class="muted hint">
       Колесо миші: масштаб · перетягни фон, щоб посунути карту · подвійний клік по вузлу згортає і розгортає гілку · тягни вузол на середину іншого, щоб зробити його дитиною, або на край, щоб змінити порядок.
-      <br />Клавіші: <kbd>Tab</kbd> вкладений · <kbd>Enter</kbd> сусід · <kbd>F2</kbd> текст · <kbd>Delete</kbd> видалити · <kbd>Esc</kbd> зняти виділення.
+      <br />Клавіші: <kbd>Tab</kbd> вкладений · <kbd>Enter</kbd> сусід · <kbd>F2</kbd> текст · <kbd>Delete</kbd> видалити · <kbd>Esc</kbd> зняти виділення · <kbd>Ctrl+Z</kbd> скасувати · <kbd>Ctrl+Shift+Z</kbd> повторити.
     </p>
 
     <AttachmentPanel
