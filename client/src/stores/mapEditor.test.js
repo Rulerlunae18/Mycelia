@@ -260,6 +260,53 @@ describe('mapEditor store', () => {
   });
 
   describe('скасування і повтор (Command)', () => {
+    it('нотатка зберігається, скасовується і повторюється', async () => {
+      http.patch.mockImplementation(async (_url, data) => ({ node: { id: 'a', ...data } }));
+      await store.setNote('a', 'Довгий опис ідеї');
+      expect(http.patch).toHaveBeenLastCalledWith('/maps/m1/nodes/a', { note: 'Довгий опис ідеї' });
+      expect(store.root.find('a').extra.note).toBe('Довгий опис ідеї');
+      expect(store.historyState.undoLabel).toBe('зміна нотатки');
+
+      await store.undo();
+      expect(http.patch).toHaveBeenLastCalledWith('/maps/m1/nodes/a', { note: null });
+      expect(store.root.find('a').extra.note ?? null).toBeNull();
+
+      await store.redo();
+      expect(store.root.find('a').extra.note).toBe('Довгий опис ідеї');
+    });
+
+    it('послідовні правки нотатки зливаються в один крок історії', async () => {
+      http.patch.mockImplementation(async (_url, data) => ({ node: { id: 'a', ...data } }));
+      await store.setNote('a', 'Пер');
+      await store.setNote('a', 'Перший чернетковий варіант');
+      await store.setNote('a', 'Готовий текст');
+      await store.undo();
+      expect(store.root.find('a').extra.note ?? null).toBeNull();
+      expect(store.historyState.canUndo).toBe(false);
+      await store.redo();
+      expect(store.root.find('a').extra.note).toBe('Готовий текст');
+    });
+
+    it('нотатки різних вузлів не зливаються', async () => {
+      http.patch.mockImplementation(async (url, data) => ({ node: { id: url.split('/').pop(), ...data } }));
+      await store.setNote('a', 'про A');
+      await store.setNote('b', 'про B');
+      await store.undo();
+      expect(store.root.find('b').extra.note ?? null).toBeNull();
+      expect(store.root.find('a').extra.note).toBe('про A');
+    });
+
+    it('порожня нотатка стає null, а незмінена нічого не шле', async () => {
+      http.patch.mockImplementation(async (_url, data) => ({ node: { id: 'a', ...data } }));
+      await store.setNote('a', 'текст');
+      http.patch.mockClear();
+      await store.setNote('a', 'текст');
+      expect(http.patch).not.toHaveBeenCalled();
+      await store.setNote('a', '   \n ');
+      expect(http.patch).toHaveBeenCalledWith('/maps/m1/nodes/a', { note: null });
+      expect(store.root.find('a').extra.note).toBeNull();
+    });
+
     it('зміна тексту скасовується і повторюється зі старим і новим значенням', async () => {
       http.patch.mockImplementation(async (_url, data) => ({ node: { id: 'a', ...data } }));
       await store.rename('a', 'Нова');

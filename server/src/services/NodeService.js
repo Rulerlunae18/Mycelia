@@ -48,7 +48,9 @@ export class NodeService {
   async update(ownerId, mapId, nodeId, patch) {
     const nodes = await this.#load(ownerId, mapId);
     this.#find(nodes, nodeId);
-    const node = await this.nodes.update(nodeId, patch);
+    // Порожня або суто пробільна нотатка означає «нотатки немає»
+    const data = typeof patch.note === 'string' && !patch.note.trim() ? { ...patch, note: null } : patch;
+    const node = await this.nodes.update(nodeId, data);
     await this.maps.touch(mapId);
     return node;
   }

@@ -6,6 +6,7 @@ import AttachmentPanel from '../components/AttachmentPanel.vue';
 import MapCanvas from '../components/MapCanvas.vue';
 import MapTabs from '../components/MapTabs.vue';
 import NodeItem from '../components/NodeItem.vue';
+import NotePanel from '../components/NotePanel.vue';
 import { LAYOUTS, LAYOUT_NAMES } from '../core/layout';
 import { CATEGORIES, PRIORITIES } from '../core/marks';
 import { THEMES, THEME_NAMES } from '../core/theme';
@@ -185,6 +186,14 @@ function removeSelected(id = store.selectedId) {
       Колесо миші: масштаб · перетягни фон, щоб посунути карту · подвійний клік по вузлу згортає і розгортає гілку · тягни вузол на середину іншого, щоб зробити його дитиною, або на край, щоб змінити порядок.
       <br />Клавіші: <kbd>Tab</kbd> вкладений · <kbd>Enter</kbd> сусід · <kbd>F2</kbd> текст · <kbd>F</kbd> на весь екран · <kbd>Delete</kbd> видалити · <kbd>Esc</kbd> зняти виділення · <kbd>Ctrl+Z</kbd> скасувати · <kbd>Ctrl+Shift+Z</kbd> повторити.
     </p>
+
+    <NotePanel
+      v-if="store.selected && store.map"
+      :node-id="store.selectedId"
+      :node-title="store.selected.text"
+      :note="store.selected.extra.note ?? ''"
+      @save="({ id, note }) => run(() => store.setNote(id, note))"
+    />
 
     <AttachmentPanel
       v-if="store.selected && store.map"

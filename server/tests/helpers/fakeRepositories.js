@@ -90,6 +90,7 @@ function newNode({ mapId, parentId, text, order }) {
     style: null,
     category: null,
     priority: null,
+    note: null,
   };
 }
 

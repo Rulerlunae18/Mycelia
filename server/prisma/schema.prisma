@@ -50,6 +50,7 @@ model Node {
   style     Json?
   category  String? // значок категорії
   priority  String? // значок терміновості
+  note      String? @db.Text // розгорнутий опис ідеї, що не влазить у вузол
 
   map         MindMap      @relation(fields: [mapId], references: [id], onDelete: Cascade)
   parent      Node?        @relation("NodeTree", fields: [parentId], references: [id], onDelete: Cascade)
