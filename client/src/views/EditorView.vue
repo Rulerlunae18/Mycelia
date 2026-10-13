@@ -183,7 +183,7 @@ function removeSelected(id = store.selectedId) {
     />
     <p class="muted hint">
       Колесо миші: масштаб · перетягни фон, щоб посунути карту · подвійний клік по вузлу згортає і розгортає гілку · тягни вузол на середину іншого, щоб зробити його дитиною, або на край, щоб змінити порядок.
-      <br />Клавіші: <kbd>Tab</kbd> вкладений · <kbd>Enter</kbd> сусід · <kbd>F2</kbd> текст · <kbd>Delete</kbd> видалити · <kbd>Esc</kbd> зняти виділення · <kbd>Ctrl+Z</kbd> скасувати · <kbd>Ctrl+Shift+Z</kbd> повторити.
+      <br />Клавіші: <kbd>Tab</kbd> вкладений · <kbd>Enter</kbd> сусід · <kbd>F2</kbd> текст · <kbd>F</kbd> на весь екран · <kbd>Delete</kbd> видалити · <kbd>Esc</kbd> зняти виділення · <kbd>Ctrl+Z</kbd> скасувати · <kbd>Ctrl+Shift+Z</kbd> повторити.
     </p>
 
     <AttachmentPanel
