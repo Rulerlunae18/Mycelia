@@ -1,3 +1,5 @@
+import '@fontsource/fraunces/600.css';
+import '@fontsource/cormorant/500-italic.css';
 import { createPinia } from 'pinia';
 import { createApp } from 'vue';
 import App from './App.vue';
