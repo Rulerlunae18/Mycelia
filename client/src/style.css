@@ -9,6 +9,13 @@
   --accent-ink: #0a1f14;
   --danger: #ff8a8a;
   --radius: 12px;
+  /* мова «грибниці»: ті самі кольори, що на екрані входу й у списку карт */
+  --ink: #e4f7ea;
+  --soft: #b4cfbf;
+  --glow: #7ee0a4;
+  --line: rgba(126, 224, 164, 0.22);
+  --glass: rgba(20, 32, 26, 0.78);
+  --serif: Cormorant, Georgia, serif;
   font-family: Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
   color-scheme: dark;
 }
@@ -30,41 +37,68 @@ h1, h2 { margin: 0 0 0.75rem; font-weight: 650; letter-spacing: -0.01em; }
 .container { max-width: 880px; margin: 0 auto; padding: 0 16px; }
 
 .card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 24px;
+  background: var(--glass);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 20px 22px;
+  box-shadow: 0 0 0 1px rgba(126, 224, 164, 0.04), 0 18px 48px rgba(0, 0, 0, 0.35);
 }
 
 .field { display: grid; gap: 6px; margin-bottom: 14px; }
 .field label { color: var(--muted); font-size: 0.875rem; }
 
-input[type='text'], input[type='email'], input[type='password'] {
+input:not([type]), input[type='text'], input[type='email'], input[type='password'] {
   width: 100%;
   padding: 10px 12px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  background: var(--surface-2);
-  color: var(--text);
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: rgba(8, 16, 12, 0.55);
+  color: var(--ink);
   font: inherit;
+  transition: border-color 0.2s, background 0.2s;
 }
-input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+input:focus { outline: none; border-color: rgba(126, 224, 164, 0.6); background: rgba(8, 16, 12, 0.8); box-shadow: 0 0 0 3px rgba(126, 224, 164, 0.12); }
+:focus-visible { outline: 2px solid var(--glow); outline-offset: 2px; }
+
+select {
+  font: inherit; font-size: 0.9rem; padding: 7px 34px 7px 12px; color: var(--ink); cursor: pointer;
+  background-color: rgba(8, 16, 12, 0.55); border: 1px solid var(--line); border-radius: 10px;
+  appearance: none; max-width: 100%;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%237ee0a4' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat; background-position: right 10px center; background-size: 14px;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+select:hover { border-color: rgba(126, 224, 164, 0.5); }
+select:focus { outline: none; border-color: rgba(126, 224, 164, 0.6); box-shadow: 0 0 0 3px rgba(126, 224, 164, 0.12); }
+select option { background-color: #16221c; color: #fff; }
 
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   padding: 10px 16px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  background: var(--surface-2);
-  color: var(--text);
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: rgba(126, 224, 164, 0.07);
+  color: var(--soft);
   font: inherit; font-weight: 600;
   cursor: pointer;
+  transition: color 0.2s, background 0.2s, border-color 0.2s, box-shadow 0.2s;
 }
-.btn:hover { border-color: var(--accent); }
-.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn:hover { color: var(--ink); border-color: rgba(126, 224, 164, 0.55); background: rgba(126, 224, 164, 0.14); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
 .btn-primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
-.btn-danger { color: var(--danger); }
-.btn-small { padding: 6px 10px; font-size: 0.875rem; }
+.btn-primary:hover { color: var(--accent-ink); background: #94edb7; border-color: #94edb7; box-shadow: 0 0 18px rgba(126, 224, 164, 0.35); }
+.btn-danger { color: #d8aaa2; }
+.btn-danger:hover { color: #ff9f90; background: rgba(255, 110, 90, 0.12); border-color: rgba(255, 138, 120, 0.5); }
+.btn-small { padding: 6px 11px; font-size: 0.875rem; }
+
+kbd {
+  font: inherit; font-size: 0.8em; padding: 1px 7px; color: var(--soft);
+  border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 6px; background: rgba(8, 16, 12, 0.5);
+}
 
 .error { color: var(--danger); font-size: 0.9rem; margin: 0 0 12px; }
 .muted { color: var(--muted); }
+
+@keyframes rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; animation-delay: 0s !important; transition-duration: 0.01ms !important; } }

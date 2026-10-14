@@ -62,17 +62,19 @@ const src = (mapId, id) => fileUrl(apiUrl, mapId, id);
 </template>
 
 <style scoped>
-.panel { margin-top: 16px; }
-.panel.over { border-color: var(--accent); background: var(--surface-2); }
+.panel { transition: border-color 0.2s, background 0.2s, box-shadow 0.2s; }
+/* файл над панеллю: нитка стає штриховою і світиться, як область на карті */
+.panel.over { border-style: dashed; border-color: var(--glow); background: rgba(126, 224, 164, 0.1); box-shadow: 0 0 28px rgba(126, 224, 164, 0.2); }
 header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-h2 { margin: 0; font-size: 1rem; }
+h2 { margin: 0; font-family: var(--serif); font-size: 1.5rem; font-weight: 600; color: var(--ink); line-height: 1.2; }
+h2 .muted { font-style: italic; font-weight: 500; color: var(--soft); }
 .btn.disabled { opacity: 0.6; pointer-events: none; }
-.empty { margin: 10px 0 0; }
-.items { list-style: none; margin: 12px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
-.item { display: grid; grid-template-columns: 96px 1fr auto; gap: 10px; align-items: center; }
-.preview { width: 96px; height: 72px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.empty { margin: 12px 0 0; padding: 20px; text-align: center; border: 1px dashed rgba(126, 224, 164, 0.25); border-radius: 12px; }
+.items { list-style: none; margin: 14px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.item { display: grid; grid-template-columns: 96px 1fr auto; gap: 12px; align-items: center; padding: 8px; background: rgba(8, 16, 12, 0.4); border: 1px solid rgba(126, 224, 164, 0.14); border-radius: 12px; }
+.preview { width: 96px; height: 72px; object-fit: cover; border-radius: 9px; border: 1px solid var(--line); background: rgba(8, 16, 12, 0.7); display: flex; align-items: center; justify-content: center; overflow: hidden; }
 .preview img, video.preview { width: 100%; height: 100%; object-fit: cover; }
 .file { font-size: 1.8rem; text-decoration: none; }
 .meta { display: grid; min-width: 0; font-size: 0.85rem; }
-.name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink); }
 </style>

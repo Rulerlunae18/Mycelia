@@ -3,9 +3,11 @@ import { nextTick, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ApiError } from '../api/http';
 import AttachmentPanel from '../components/AttachmentPanel.vue';
+import MyceliumBackdrop from '../components/MyceliumBackdrop.vue';
 import MapCanvas from '../components/MapCanvas.vue';
 import MapTabs from '../components/MapTabs.vue';
 import NodeItem from '../components/NodeItem.vue';
+import NotePanel from '../components/NotePanel.vue';
 import { LAYOUTS, LAYOUT_NAMES } from '../core/layout';
 import { CATEGORIES, PRIORITIES } from '../core/marks';
 import { THEMES, THEME_NAMES } from '../core/theme';
@@ -95,49 +97,53 @@ function removeSelected(id = store.selectedId) {
 </script>
 
 <template>
-  <MapTabs :tabs="tabs.tabs" :active-id="route.params.id" @close="closeTab" @rename="renameTab" />
-  <p v-if="error" class="error" role="alert">{{ error }}</p>
+  <MyceliumBackdrop calm />
+  <div class="editor">
+    <MapTabs :tabs="tabs.tabs" :active-id="route.params.id" @close="closeTab" @rename="renameTab" />
+    <p v-if="error" class="error" role="alert">{{ error }}</p>
 
-  <template v-if="store.map">
-    <h1>{{ store.map.title }}</h1>
+    <template v-if="store.map">
+      <header class="head">
+        <h1 class="title">{{ store.map.title }}</h1>
+        <p class="count">{{ store.root?.size() }} вузлів</p>
+      </header>
 
-    <div class="toolbar">
-      <div class="seg" role="group" aria-label="Розкладка">
-        <button
-          v-for="name in LAYOUT_NAMES"
-          :key="name"
-          class="btn btn-small"
-          :class="{ active: store.layout === name }"
-          :aria-pressed="store.layout === name"
-          @click="run(() => store.setLayout(name))"
-        >{{ LAYOUTS[name].label }}</button>
+      <div class="deck card" role="toolbar" aria-label="Налаштування карти">
+        <div class="seg" role="group" aria-label="Розкладка">
+          <button
+            v-for="name in LAYOUT_NAMES"
+            :key="name"
+            class="btn btn-small"
+            :class="{ active: store.layout === name }"
+            :aria-pressed="store.layout === name"
+            @click="run(() => store.setLayout(name))"
+          >{{ LAYOUTS[name].label }}</button>
+        </div>
+
+        <label class="theme">
+          <span class="muted">Тема</span>
+          <select :value="store.theme" aria-label="Тема" @change="run(() => store.setTheme($event.target.value))">
+            <option v-for="name in THEME_NAMES" :key="name" :value="name">{{ THEMES[name].label }}</option>
+          </select>
+        </label>
+
+        <div class="seg history" role="group" aria-label="Історія">
+          <button
+            class="btn btn-small" :disabled="!store.historyState.canUndo"
+            :title="store.historyState.canUndo ? `Скасувати: ${store.historyState.undoLabel} (Ctrl+Z)` : 'Нічого скасовувати'"
+            aria-label="Скасувати" @click="run(() => store.undo())"
+          >↶</button>
+          <button
+            class="btn btn-small" :disabled="!store.historyState.canRedo"
+            :title="store.historyState.canRedo ? `Повторити: ${store.historyState.redoLabel} (Ctrl+Shift+Z)` : 'Нічого повторювати'"
+            aria-label="Повторити" @click="run(() => store.redo())"
+          >↷</button>
+        </div>
       </div>
 
-      <label class="field">
-        <span class="muted">Тема</span>
-        <select :value="store.theme" aria-label="Тема" @change="run(() => store.setTheme($event.target.value))">
-          <option v-for="name in THEME_NAMES" :key="name" :value="name">{{ THEMES[name].label }}</option>
-        </select>
-      </label>
-
-      <div class="seg" role="group" aria-label="Історія">
-        <button
-          class="btn btn-small" :disabled="!store.historyState.canUndo"
-          :title="store.historyState.canUndo ? `Скасувати: ${store.historyState.undoLabel} (Ctrl+Z)` : 'Нічого скасовувати'"
-          aria-label="Скасувати" @click="run(() => store.undo())"
-        >↶</button>
-        <button
-          class="btn btn-small" :disabled="!store.historyState.canRedo"
-          :title="store.historyState.canRedo ? `Повторити: ${store.historyState.redoLabel} (Ctrl+Shift+Z)` : 'Нічого повторювати'"
-          aria-label="Повторити" @click="run(() => store.redo())"
-        >↷</button>
-      </div>
-
-      <span class="muted count">вузлів: {{ store.root?.size() }}</span>
-
-      <div class="selection">
+      <div class="pick card" :class="{ idle: !store.selected }" aria-label="Вибраний вузол">
         <template v-if="store.selected">
-          <span class="muted name">Вибрано: <b>{{ store.selected.text || 'без тексту' }}</b></span>
+          <span class="chip" :title="store.selected.text">{{ store.selected.text || 'без тексту' }}</span>
           <select
             :value="store.selected.extra.category ?? ''" aria-label="Категорія"
             @change="run(() => store.patch(store.selectedId, { category: $event.target.value || null }))"
@@ -152,91 +158,136 @@ function removeSelected(id = store.selectedId) {
             <option value="">Без терміновості</option>
             <option v-for="p in PRIORITIES" :key="p.key" :value="p.key">{{ p.glyph }} {{ p.label }}</option>
           </select>
-          <button class="btn btn-small" @click="canvas?.edit(store.selectedId)">✎ Текст</button>
-          <button v-if="!store.selected.isRoot" class="btn btn-small" title="Копія вузла з усіма вкладеними, одразу після нього" @click="run(() => store.duplicate(store.selectedId))">⧉ Дублювати гілку</button>
-          <button class="btn btn-small" title="Пунктирна область навколо вузла і всієї його гілки" @click="run(() => store.addBoundaryForBranch(store.selectedId))">▢ Обвести гілку</button>
-          <button class="btn btn-small" @click="addChild()">＋ Вкладений</button>
-          <button v-if="!store.selected.isRoot" class="btn btn-small btn-danger" @click="removeSelected()">✕ Видалити</button>
+          <span class="acts">
+            <button class="btn btn-small" @click="canvas?.edit(store.selectedId)">✎ Текст</button>
+            <button class="btn btn-small" @click="addChild()">＋ Вкладений</button>
+            <button v-if="!store.selected.isRoot" class="btn btn-small" title="Копія вузла з усіма вкладеними, одразу після нього" @click="run(() => store.duplicate(store.selectedId))">⧉ Дублювати</button>
+            <button class="btn btn-small" title="Пунктирна область навколо вузла і всієї його гілки" @click="run(() => store.addBoundaryForBranch(store.selectedId))">▢ Обвести</button>
+            <button v-if="!store.selected.isRoot" class="btn btn-small btn-danger" @click="removeSelected()">✕ Видалити</button>
+          </span>
         </template>
-        <span v-else class="muted">Клацни вузол, щоб вибрати</span>
+        <span v-else class="hintline">Клацни вузол на карті, щоб змінити його, додати значок, нотатку чи файл.</span>
       </div>
-    </div>
 
-    <MapCanvas
-      v-if="store.root"
-      ref="canvas"
-      :root="store.root"
-      :layout="store.layout"
-:theme="store.theme"
-      :boundaries="store.boundaries"
-      :attachment-counts="store.attachmentCounts"
-      :selected-id="store.selectedId"
-      @select="store.select"
-      @toggle="(id) => run(() => store.toggleCollapsed(id))"
-      @rename="({ id, text }) => run(() => store.rename(id, text))"
-      @add-child="addChild"
-      @add-sibling="addSibling"
-      @remove="removeSelected"
-      @undo="run(() => store.undo())"
-      @redo="run(() => store.redo())"
-      @move="({ id, parentId, index }) => run(() => store.moveAndReveal(id, parentId, index))"
-    />
-    <p class="muted hint">
-      Колесо миші: масштаб · перетягни фон, щоб посунути карту · подвійний клік по вузлу згортає і розгортає гілку · тягни вузол на середину іншого, щоб зробити його дитиною, або на край, щоб змінити порядок.
-      <br />Клавіші: <kbd>Tab</kbd> вкладений · <kbd>Enter</kbd> сусід · <kbd>F2</kbd> текст · <kbd>F</kbd> на весь екран · <kbd>Delete</kbd> видалити · <kbd>Esc</kbd> зняти виділення · <kbd>Ctrl+Z</kbd> скасувати · <kbd>Ctrl+Shift+Z</kbd> повторити.
-    </p>
+      <MapCanvas
+        v-if="store.root"
+        ref="canvas"
+        :root="store.root"
+        :layout="store.layout"
+        :theme="store.theme"
+        :boundaries="store.boundaries"
+        :attachment-counts="store.attachmentCounts"
+        :selected-id="store.selectedId"
+        @select="store.select"
+        @toggle="(id) => run(() => store.toggleCollapsed(id))"
+        @rename="({ id, text }) => run(() => store.rename(id, text))"
+        @add-child="addChild"
+        @add-sibling="addSibling"
+        @remove="removeSelected"
+        @undo="run(() => store.undo())"
+        @redo="run(() => store.redo())"
+        @move="({ id, parentId, index }) => run(() => store.moveAndReveal(id, parentId, index))"
+      />
+      <p class="hint">
+        Колесо миші: масштаб · перетягни фон, щоб посунути карту · подвійний клік по вузлу згортає і розгортає гілку · тягни вузол на середину іншого, щоб зробити його дитиною, або на край, щоб змінити порядок.
+        <br />Клавіші: <kbd>Tab</kbd> вкладений · <kbd>Enter</kbd> сусід · <kbd>F2</kbd> текст · <kbd>F</kbd> на весь екран · <kbd>Delete</kbd> видалити · <kbd>Esc</kbd> зняти виділення · <kbd>Ctrl+Z</kbd> скасувати · <kbd>Ctrl+Shift+Z</kbd> повторити.
+      </p>
 
-    <AttachmentPanel
-      v-if="store.selected && store.map"
-      :map-id="store.map.id"
-      :node-title="store.selected.text"
-      :attachments="store.selectedAttachments"
-      :busy="uploading"
-      @upload="(files) => uploadFiles(store.selectedId, files)"
-      @remove="(id) => run(() => store.removeAttachment(store.selectedId, id))"
-    />
+      <div v-if="store.selected && store.map" class="panels">
+        <NotePanel
+          :node-id="store.selectedId"
+          :node-title="store.selected.text"
+          :note="store.selected.extra.note ?? ''"
+          @save="({ id, note }) => run(() => store.setNote(id, note))"
+        />
+        <AttachmentPanel
+          :map-id="store.map.id"
+          :node-title="store.selected.text"
+          :attachments="store.selectedAttachments"
+          :busy="uploading"
+          @upload="(files) => uploadFiles(store.selectedId, files)"
+          @remove="(id) => run(() => store.removeAttachment(store.selectedId, id))"
+        />
+      </div>
 
-    <details v-if="store.boundaries.length" class="card outline" open>
-      <summary>Області ({{ store.boundaries.length }})</summary>
-      <ul class="areas">
-        <li v-for="b in store.boundaries" :key="b.id">
-          <input
-            :value="b.label"
-            class="area-name"
-            maxlength="120"
-            aria-label="Назва області"
-            placeholder="Без назви"
-            @change="run(() => store.renameBoundary(b.id, $event.target.value))"
-          />
-          <span class="muted">вузлів: {{ b.nodeIds.length }}</span>
-          <button class="btn btn-small btn-danger" :aria-label="`Видалити область ${b.label}`" @click="run(() => store.removeBoundary(b.id))">✕</button>
-        </li>
-      </ul>
-    </details>
+      <details v-if="store.boundaries.length" class="card outline" open>
+        <summary>Області <span class="muted">{{ store.boundaries.length }}</span></summary>
+        <ul class="areas">
+          <li v-for="b in store.boundaries" :key="b.id">
+            <input
+              :value="b.label"
+              class="area-name"
+              maxlength="120"
+              aria-label="Назва області"
+              placeholder="Без назви"
+              @change="run(() => store.renameBoundary(b.id, $event.target.value))"
+            />
+            <span class="muted">вузлів: {{ b.nodeIds.length }}</span>
+            <button class="btn btn-small btn-danger" :aria-label="`Видалити область ${b.label}`" @click="run(() => store.removeBoundary(b.id))">✕</button>
+          </li>
+        </ul>
+      </details>
 
-    <details class="card outline">
-      <summary>Структура: змінити текст вузлів</summary>
-      <ul class="tree"><NodeItem v-if="store.root" :node="store.root" /></ul>
-      <p class="muted note">Клацни на текст, щоб змінити (Enter: зберегти, Esc: скасувати).</p>
-    </details>
-  </template>
+      <details class="card outline">
+        <summary>Структура <span class="muted">змінити текст вузлів списком</span></summary>
+        <ul class="tree"><NodeItem v-if="store.root" :node="store.root" /></ul>
+        <p class="muted note">Клацни на текст, щоб змінити (Enter: зберегти, Esc: скасувати).</p>
+      </details>
+    </template>
+  </div>
 </template>
 
 <style scoped>
-.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; margin-bottom: 12px; }
-.seg { display: inline-flex; gap: 4px; }
-.seg .btn.active { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
-kbd { font: inherit; font-size: 0.8em; padding: 1px 6px; border: 1px solid var(--border); border-radius: 5px; background: var(--surface-2); }
-.field { display: inline-flex; align-items: center; gap: 6px; font-size: 0.875rem; }
-select { font: inherit; font-size: 0.85rem; padding: 4px 8px; color: var(--text); background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; max-width: 14ch; }
-.areas { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 8px; }
+.editor { position: relative; z-index: 1; padding-bottom: 60px; }
+
+/* ── Заголовок карти ── */
+.head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 20px; margin-bottom: 18px; }
+.title {
+  margin: 0; font-family: var(--serif); font-weight: 600; font-size: clamp(2rem, 4.5vw, 2.9rem); line-height: 1.05;
+  color: var(--ink); text-shadow: 0 0 28px rgba(126, 224, 164, 0.22); overflow-wrap: anywhere;
+}
+.count { margin: 0; font-family: var(--serif); font-style: italic; font-weight: 500; font-size: 1.3rem; color: var(--soft); }
+
+/* ── Панель карти і панель вибраного вузла ── */
+.deck, .pick { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; padding: 10px 14px; border-radius: 14px; margin-bottom: 10px; }
+.seg { display: inline-flex; gap: 4px; padding: 3px; background: rgba(8, 16, 12, 0.45); border: 1px solid rgba(126, 224, 164, 0.14); border-radius: 12px; }
+.seg .btn { border-color: transparent; background: transparent; }
+.seg .btn:hover { background: rgba(126, 224, 164, 0.12); }
+.seg .btn.active { background: var(--glow); color: var(--accent-ink); box-shadow: 0 0 14px rgba(126, 224, 164, 0.3); }
+.theme { display: inline-flex; align-items: center; gap: 8px; font-size: 0.9rem; }
+.history { margin-left: auto; }
+
+.pick { min-height: 54px; }
+.pick.idle { background: rgba(20, 32, 26, 0.45); border-style: dashed; }
+.hintline { font-family: var(--serif); font-style: italic; font-size: 1.15rem; color: var(--muted); }
+.chip {
+  max-width: 26ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 4px 14px;
+  font-family: var(--serif); font-size: 1.2rem; font-weight: 600; color: var(--ink);
+  background: radial-gradient(circle at 20% 50%, rgba(126, 224, 164, 0.2), rgba(8, 16, 12, 0.6));
+  border: 1px solid rgba(126, 224, 164, 0.5); border-radius: 999px; box-shadow: 0 0 14px rgba(126, 224, 164, 0.15);
+}
+.acts { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
+
+.hint { margin: 14px 2px 22px; font-size: 0.85rem; line-height: 1.7; color: var(--muted); }
+
+/* ── Нотатка і вкладення поруч, на вузькому екрані одна під одною ── */
+.panels { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 16px; align-items: start; margin-bottom: 16px; }
+
+/* ── Області та структура ── */
+.outline { margin-top: 16px; }
+.outline summary { cursor: pointer; font-family: var(--serif); font-size: 1.5rem; font-weight: 600; color: var(--ink); list-style-position: outside; }
+.outline summary .muted { margin-left: 8px; font-family: inherit; font-size: 1.1rem; font-style: italic; font-weight: 500; }
+.outline summary { display: flex; align-items: baseline; list-style: none; }
+.outline summary::-webkit-details-marker { display: none; }
+/* «брунька»: закрита порожня, відкрита світиться, як активна вкладка */
+.outline summary::before {
+  content: ''; flex: none; width: 9px; height: 9px; margin-right: 12px; align-self: center; border-radius: 50%;
+  border: 1.5px solid rgba(126, 224, 164, 0.6); background: #0f1713; transition: background 0.25s, box-shadow 0.25s;
+}
+.outline[open] > summary::before { background: var(--glow); border-color: var(--glow); box-shadow: 0 0 10px var(--glow); }
+.areas { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 8px; }
 .areas li { display: flex; align-items: center; gap: 10px; }
 .area-name { flex: 1; max-width: 360px; }
-.count { font-size: 0.875rem; }
-.selection { flex-wrap: wrap; display: flex; align-items: center; gap: 8px; margin-left: auto; min-width: 0; }
-.name { max-width: 28ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.hint { font-size: 0.85rem; margin: 10px 0 20px; }
-.outline summary { cursor: pointer; font-weight: 600; }
 .tree { margin: 12px 0 0; padding: 0; }
 .note { margin: 16px 0 0; font-size: 0.875rem; }
 </style>

@@ -9,14 +9,16 @@ import { childrenOf } from './tree.js';
 // один шаблон можна розмножувати скільки завгодно.
 
 const MAX_TEXT = 2000;
+const MAX_NOTE = 10000;
 
 export class NodePrototype {
-  constructor({ text = '', collapsed = false, style = null, category = null, priority = null, children = [] } = {}) {
+  constructor({ text = '', collapsed = false, style = null, category = null, priority = null, note = null, children = [] } = {}) {
     this.text = text;
     this.collapsed = collapsed;
     this.style = style;
     this.category = category;
     this.priority = priority;
+    this.note = note;
     this.children = children;
   }
 
@@ -28,6 +30,7 @@ export class NodePrototype {
       style: this.style === null ? null : structuredClone(this.style),
       category: this.category,
       priority: this.priority,
+      note: this.note,
       children: this.children.map((c) => c.clone()),
     });
   }
@@ -45,6 +48,7 @@ export class NodePrototype {
         style: row.style ?? null,
         category: row.category ?? null,
         priority: row.priority ?? null,
+        note: row.note ?? null,
         children: childrenOf(rows, row.id).map(build),
       });
     return build(rows.find((r) => r.id === rootId));
@@ -58,6 +62,7 @@ export class NodePrototype {
       style: snap.style ?? null,
       category: snap.category ?? null,
       priority: snap.priority ?? null,
+      note: snap.note ?? null,
       children: (snap.children ?? []).map((c) => NodePrototype.fromSnapshot(c)),
     });
   }
@@ -72,6 +77,7 @@ export class NodePrototype {
         id, mapId, parentId: parent, order: position,
         text: proto.text.slice(0, MAX_TEXT), collapsed: proto.collapsed,
         style: proto.style, category: proto.category, priority: proto.priority,
+        note: proto.note === null ? null : proto.note.slice(0, MAX_NOTE),
       });
       proto.children.forEach((c, i) => walk(c, id, i));
     };

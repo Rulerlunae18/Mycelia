@@ -9,7 +9,7 @@
 //   drawEdge(edge)  edge = { fromId, toId, path, depth, look }  path = SVG-шлях кривої, look = EdgeStyle
 //   drawNode(node)  node = { id, rect, text, label, depth, isRoot, collapsed,
 //                            hiddenCount, selected, category, priority, style,
-//                            look (NodeStyle), inset, attachmentCount, marks: { category, priority } }
+//                            look (NodeStyle), inset, attachmentCount, hasNote, marks: { category, priority } }
 //   end()           повертає результат малювання (сцену, зображення тощо)
 
 export const BACKEND_METHODS = ['begin', 'drawBoundary', 'drawEdge', 'drawNode', 'end'];

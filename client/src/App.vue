@@ -8,6 +8,8 @@ const router = useRouter();
 const route = useRoute();
 // Екрани входу й реєстрації без шапки: там головне фон і форма
 const bare = computed(() => !!route.meta.bare);
+// Редактор карти ширший за решту сторінок: полотну потрібне місце
+const wide = computed(() => !!route.meta.wide);
 // перша літера пошти — для «вузла» поруч з email
 const initial = computed(() => auth.user?.email?.[0]?.toUpperCase() ?? '');
  
@@ -18,7 +20,7 @@ async function logout() {
 </script>
  
 <template>
-  <header v-if="!bare" class="topbar">
+  <header v-if="!bare" class="topbar" :class="{ wide }">
     <div class="bar">
       <RouterLink to="/maps" class="brand">Mycelia</RouterLink>
       <div v-if="auth.user" class="user">
@@ -28,7 +30,7 @@ async function logout() {
       </div>
     </div>
   </header>
-  <main v-if="!bare" class="container page">
+  <main v-if="!bare" class="container page" :class="{ wide }">
     <RouterView />
   </main>
   <RouterView v-else />
@@ -95,6 +97,10 @@ async function logout() {
 .logout:hover { color: #ff9f90; background: rgba(255, 110, 90, 0.1); border-color: rgba(255, 138, 120, 0.45); }
 .logout:focus-visible { outline: 2px solid #7ee0a4; outline-offset: 2px; }
  
+/* шапка вирівняна по тій самій колонці, що й сторінка */
+.topbar.wide .bar { padding: 0 max(16px, calc((100% - 1208px) / 2)); }
+.page.wide { max-width: 1240px; }
+
 /* відступ сторінки лишаємо малим: свій відступ задає кожна сторінка */
 .page { padding-top: 12px; padding-bottom: 48px; }
  

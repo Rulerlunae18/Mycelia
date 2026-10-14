@@ -36,6 +36,8 @@ export const CATEGORIES = ['idea', 'task', 'question', 'info', 'risk', 'decision
 export const PRIORITIES = ['low', 'normal', 'high', 'urgent'];
 
 const nodeText = z.string().max(2000, 'Текст вузла занадто довгий (максимум 2000 символів)');
+export const MAX_NOTE = 10000;
+const noteText = z.string().max(MAX_NOTE, `Нотатка занадто довга (максимум ${MAX_NOTE} символів)`);
 const styleSchema = z
   .record(z.string().max(32), z.union([z.string().max(64), z.number(), z.boolean()]))
   .refine((v) => Object.keys(v).length <= 20, 'Забагато полів стилю');
@@ -53,6 +55,7 @@ export const updateNodeSchema = z
     style: styleSchema.optional(),
     category: z.enum(CATEGORIES).nullable().optional(),
     priority: z.enum(PRIORITIES).nullable().optional(),
+    note: noteText.nullable().optional(),
   })
   .refine((v) => Object.keys(v).length > 0, 'Немає полів для оновлення');
 
@@ -69,6 +72,7 @@ export const restoreNodesSchema = z.object({
         style: styleSchema.nullable().default(null),
         category: z.enum(CATEGORIES).nullable().default(null),
         priority: z.enum(PRIORITIES).nullable().default(null),
+        note: noteText.nullable().default(null),
         order: z.number().int().min(0),
       }),
     )
