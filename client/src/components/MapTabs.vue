@@ -64,14 +64,14 @@ function commit() {
 .tabs { display: flex; flex-wrap: wrap; align-items: stretch; gap: 8px; margin-bottom: 22px; }
 .tab {
   position: relative; display: inline-flex; align-items: center; max-width: 240px; padding-left: 12px;
-  background: rgba(20, 32, 26, 0.6); backdrop-filter: blur(8px);
+  background: rgb(var(--panel-rgb) / 0.6); backdrop-filter: blur(8px);
   border: 1px solid var(--line); border-radius: 12px;
   transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
 }
-.tab:hover { border-color: rgba(126, 224, 164, 0.45); }
+.tab:hover { border-color: rgb(var(--glow-rgb) / 0.45); }
 /* «бруньки» на нитці: у активної вкладки світиться */
-.bud { flex: none; width: 7px; height: 7px; border-radius: 50%; border: 1.5px solid rgba(126, 224, 164, 0.55); background: #0f1713; transition: background 0.25s, box-shadow 0.25s; }
-.tab.active { background: rgba(26, 42, 34, 0.9); border-color: rgba(126, 224, 164, 0.6); box-shadow: 0 0 18px rgba(126, 224, 164, 0.12); }
+.bud { flex: none; width: 7px; height: 7px; border-radius: 50%; border: 1.5px solid rgb(var(--glow-rgb) / 0.55); background: var(--bg); transition: background 0.25s, box-shadow 0.25s; }
+.tab.active { background: rgba(26, 42, 34, 0.9); border-color: rgb(var(--glow-rgb) / 0.6); box-shadow: 0 0 18px rgb(var(--glow-rgb) / 0.12); }
 .tab.active .bud { background: var(--glow); border-color: var(--glow); box-shadow: 0 0 10px var(--glow); }
 .tab.active::after {
   content: ''; position: absolute; left: 14px; right: 14px; bottom: -1px; height: 1px;
@@ -87,11 +87,11 @@ function commit() {
 .close:hover { color: #ff9f90; }
 .tab-input {
   font: inherit; font-family: var(--serif); font-size: 1.1rem; font-weight: 600; width: 170px; margin: 4px 6px 4px 8px; padding: 2px 8px;
-  color: var(--ink); background: rgba(8, 16, 12, 0.7); border: 1px solid var(--glow); border-radius: 8px; outline: none;
+  color: var(--ink); background: rgb(var(--deep-rgb) / 0.7); border: 1px solid var(--glow); border-radius: 8px; outline: none;
 }
 .add {
   display: inline-flex; align-items: center; padding: 0 15px; font-size: 1.1rem; color: var(--muted);
-  border: 1px dashed rgba(126, 224, 164, 0.35); border-radius: 12px; transition: color 0.2s, border-color 0.2s, background 0.2s;
+  border: 1px dashed rgb(var(--glow-rgb) / 0.35); border-radius: 12px; transition: color 0.2s, border-color 0.2s, background 0.2s;
 }
-.add:hover { text-decoration: none; color: var(--glow); border-color: var(--glow); background: rgba(126, 224, 164, 0.07); }
+.add:hover { text-decoration: none; color: var(--glow); border-color: var(--glow); background: rgb(var(--glow-rgb) / 0.07); }
 </style>

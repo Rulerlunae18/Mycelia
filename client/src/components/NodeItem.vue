@@ -96,12 +96,12 @@ const remove = () => {
 
 <style scoped>
 li { list-style: none; margin: 3px 0; }
-ul { margin: 2px 0 0 7px; padding-left: 22px; border-left: 1px solid rgba(126, 224, 164, 0.25); }
+ul { margin: 2px 0 0 7px; padding-left: 22px; border-left: 1px solid rgb(var(--glow-rgb) / 0.25); }
 .row { display: flex; align-items: center; gap: 8px; min-height: 32px; }
 /* вузол на нитці */
-.dot { width: 7px; height: 7px; margin: 0 7px; border-radius: 50%; border: 1.5px solid rgba(126, 224, 164, 0.6); background: #0f1713; flex: none; }
+.dot { width: 7px; height: 7px; margin: 0 7px; border-radius: 50%; border: 1.5px solid rgb(var(--glow-rgb) / 0.6); background: var(--bg); flex: none; }
 .text { cursor: text; padding: 3px 9px; border-radius: 8px; color: var(--ink); transition: background 0.2s; }
-.text:hover { background: rgba(126, 224, 164, 0.09); }
+.text:hover { background: rgb(var(--glow-rgb) / 0.09); }
 .text.root { font-family: var(--serif); font-size: 1.25rem; font-weight: 600; color: var(--glow); }
 .edit { flex: 1; max-width: 420px; padding: 4px 8px !important; }
 .count { font-size: 0.8rem; }
@@ -109,7 +109,7 @@ ul { margin: 2px 0 0 7px; padding-left: 22px; border-left: 1px solid rgba(126, 2
 .row:hover .actions, .row:focus-within .actions { opacity: 1; }
 @media (hover: none) { .actions { opacity: 1; } }
 .icon { background: none; border: 0; color: var(--muted); cursor: pointer; font: inherit; padding: 3px 8px; border-radius: 8px; transition: color 0.2s, background 0.2s; }
-.icon:hover { color: var(--glow); background: rgba(126, 224, 164, 0.1); }
+.icon:hover { color: var(--glow); background: rgb(var(--glow-rgb) / 0.1); }
 .icon.danger:hover { color: #ff9f90; background: rgba(255, 110, 90, 0.12); }
 .small { margin: 2px 0 0 30px; font-size: 0.8rem; }
 </style>

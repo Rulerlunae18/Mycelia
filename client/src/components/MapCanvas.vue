@@ -12,7 +12,7 @@ const props = defineProps({
   root: { type: Object, required: true },
   layout: { type: String, default: 'radial' },
   selectedId: { type: String, default: null },
-  theme: { type: String, default: 'forest' },
+  theme: { type: String, default: 'berry' },
   boundaries: { type: Array, default: () => [] },
   attachmentCounts: { type: Object, default: () => ({}) },
   links: { type: Array, default: () => [] },
@@ -401,10 +401,10 @@ defineExpose({ fit, edit, toggleFullscreen });
 .canvas {
   position: relative;
   height: clamp(460px, calc(100vh - 300px), 900px);
-  border: 1px solid rgba(126, 224, 164, 0.3);
+  border: 1px solid rgb(var(--glow-rgb) / 0.3);
   border-radius: 18px;
   overflow: hidden;
-  box-shadow: 0 0 0 1px rgba(126, 224, 164, 0.05), 0 24px 60px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 0 0 1px rgb(var(--glow-rgb) / 0.05), 0 24px 60px rgba(0, 0, 0, 0.45);
 }
 .canvas:fullscreen { height: 100vh; border: 0; border-radius: 0; }
 .surface { width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; user-select: none; }
@@ -454,6 +454,6 @@ defineExpose({ fit, edit, toggleFullscreen });
 }
 .controls {
   position: absolute; right: 12px; bottom: 12px; display: flex; gap: 6px; padding: 6px;
-  background: rgba(15, 23, 19, 0.72); backdrop-filter: blur(8px); border: 1px solid var(--line); border-radius: 14px;
+  background: rgb(var(--deep-rgb) / 0.72); backdrop-filter: blur(8px); border: 1px solid var(--line); border-radius: 14px;
 }
 </style>

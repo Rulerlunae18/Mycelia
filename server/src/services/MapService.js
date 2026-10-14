@@ -4,7 +4,7 @@ import { toPublic } from './AttachmentService.js';
 // Розкладка нової карти, якщо користувач не вибрав її сам. Задаємо тут, а не в
 // schema.prisma, щоб зміна не вимагала міграції; збігається з DEFAULT_LAYOUT клієнта.
 export const DEFAULT_LAYOUT = 'bilateral';
-export const DEFAULT_THEME = 'forest';
+export const DEFAULT_THEME = 'berry';
 
 // Сервіс (SOA): карти користувача. Чужа карта для користувача
 // виглядає так само, як неіснуюча (404), щоб не розкривати чужі id.

@@ -229,10 +229,10 @@ onMounted(load);
  
 <style scoped>
 .maps-container {
-  --ink: #e4f7ea;
-  --soft: #b4cfbf;
-  --glow: #7ee0a4;
-  --line: rgba(126, 224, 164, 0.22);
+  --ink: var(--ink);
+  --soft: var(--soft);
+  --glow: var(--glow);
+  --line: rgb(var(--glow-rgb) / 0.22);
   --danger: #ff8a78;
   --pad: 38px; /* відступ списку: тут проходить «нитка» */
   --curve: 16px; /* радіус гілочки від нитки до картки */
@@ -248,9 +248,9 @@ onMounted(load);
   pointer-events: none;
   background: radial-gradient(
     ellipse 55% 75% at 50% 45%,
-    rgba(15, 23, 19, 0.8) 0%,
-    rgba(15, 23, 19, 0.5) 55%,
-    rgba(15, 23, 19, 0) 100%
+    rgb(var(--bg-rgb) / 0.8) 0%,
+    rgb(var(--bg-rgb) / 0.5) 55%,
+    rgb(var(--bg-rgb) / 0) 100%
   );
 }
  
@@ -263,7 +263,7 @@ onMounted(load);
 .page-title {
   margin: 0; font-family: Cormorant, Georgia, serif; font-weight: 600;
   font-size: clamp(2.7rem, 6vw, 3.9rem); line-height: 1; letter-spacing: -0.005em; color: var(--ink);
-  text-shadow: 0 0 28px rgba(126, 224, 164, 0.22);
+  text-shadow: 0 0 28px rgb(var(--glow-rgb) / 0.22);
 }
 .count {
   margin: 0; font-family: Cormorant, Georgia, serif; font-style: italic; font-weight: 500;
@@ -274,26 +274,26 @@ onMounted(load);
 .create {
   display: flex; flex-wrap: wrap; align-items: stretch; gap: 14px;
   margin-bottom: 44px; padding: 20px;
-  background: rgba(20, 32, 26, 0.78); backdrop-filter: blur(12px);
+  background: rgb(var(--panel-rgb) / 0.78); backdrop-filter: blur(12px);
   border: 1px solid var(--line); border-radius: 18px;
-  box-shadow: 0 0 0 1px rgba(126, 224, 164, 0.05), 0 24px 60px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 0 0 1px rgb(var(--glow-rgb) / 0.05), 0 24px 60px rgba(0, 0, 0, 0.45);
   animation: fade-up 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) 0.1s both;
 }
 .name-field { position: relative; flex: 1 1 260px; }
  
 .styled-input {
   width: 100%; box-sizing: border-box; padding: 13px 16px; font: inherit; font-size: 1rem; color: var(--ink);
-  background: rgba(8, 16, 12, 0.55); border: 1px solid var(--line); border-radius: 11px;
+  background: rgb(var(--deep-rgb) / 0.55); border: 1px solid var(--line); border-radius: 11px;
   outline: none; transition: background 0.25s, border-color 0.25s;
 }
-.styled-input::placeholder { color: rgba(180, 207, 191, 0.5); }
-.styled-input:focus { background: rgba(8, 16, 12, 0.8); border-color: rgba(126, 224, 164, 0.55); }
+.styled-input::placeholder { color: color-mix(in srgb, var(--soft) 50%, transparent); }
+.styled-input:focus { background: rgb(var(--deep-rgb) / 0.8); border-color: rgb(var(--glow-rgb) / 0.55); }
  
 /* Гіфа: нитка проростає під полем при фокусі, зліва направо */
 .hypha {
   position: absolute; left: 11px; right: 11px; bottom: 0; height: 2px; border-radius: 2px;
-  background: linear-gradient(90deg, rgba(126, 224, 164, 0), var(--glow) 40%, #d2ffe6);
-  box-shadow: 0 0 10px rgba(126, 224, 164, 0.7);
+  background: linear-gradient(90deg, rgb(var(--glow-rgb) / 0), var(--glow) 40%, var(--spark));
+  box-shadow: 0 0 10px rgb(var(--glow-rgb) / 0.7);
   transform: scaleX(0); transform-origin: left; opacity: 0; pointer-events: none;
   transition: transform 0.55s cubic-bezier(0.2, 0.7, 0.2, 1), opacity 0.3s;
 }
@@ -301,18 +301,18 @@ onMounted(load);
  
 .create select {
   flex: 0 1 210px; width: auto; min-width: 170px; cursor: pointer; appearance: none; padding-right: 42px;
-  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%237ee0a4' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
-  background-repeat: no-repeat; background-position: right 14px center; background-size: 16px;
+  background-image: linear-gradient(45deg, transparent 50%, var(--glow) 50%), linear-gradient(135deg, var(--glow) 50%, transparent 50%);
+  background-repeat: no-repeat; background-position: calc(100% - 20px) 52%, calc(100% - 15px) 52%; background-size: 5px 5px;
 }
-.create select option { background-color: #16221c; color: #fff; }
+.create select option { background-color: var(--surface); color: #fff; }
  
 .submit {
-  padding: 0 28px; font: inherit; font-size: 1rem; font-weight: 600; letter-spacing: 0.01em; color: #07210f;
-  background: linear-gradient(180deg, #9af0bb, #6fd69a); border: 0; border-radius: 11px; cursor: pointer;
-  box-shadow: 0 8px 24px rgba(126, 224, 164, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  padding: 0 28px; font: inherit; font-size: 1rem; font-weight: 600; letter-spacing: 0.01em; color: var(--accent-ink);
+  background: linear-gradient(180deg, var(--glow-hi), var(--glow)); border: 0; border-radius: 11px; cursor: pointer;
+  box-shadow: 0 8px 24px rgb(var(--glow-rgb) / 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.35);
   transition: transform 0.15s, box-shadow 0.25s, filter 0.25s, opacity 0.25s;
 }
-.submit:hover:not(:disabled) { filter: brightness(1.07); box-shadow: 0 10px 30px rgba(126, 224, 164, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.35); }
+.submit:hover:not(:disabled) { filter: brightness(1.07); box-shadow: 0 10px 30px rgb(var(--glow-rgb) / 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.35); }
 .submit:active:not(:disabled) { transform: translateY(1px); }
 .submit:disabled { opacity: 0.4; cursor: not-allowed; }
 .submit:focus-visible, .remove:focus-visible, .btn:focus-visible, .empty-cta:focus-visible { outline: 2px solid var(--glow); outline-offset: 2px; }
@@ -335,12 +335,12 @@ onMounted(load);
 /* нитка тягнеться від форми вниз і розчиняється */
 .list::before {
   content: ''; position: absolute; left: calc(var(--pad) - 26px); top: -44px; bottom: 4px; width: 1px;
-  background: linear-gradient(rgba(126, 224, 164, 0.5) 0%, rgba(126, 224, 164, 0.38) 80%, rgba(126, 224, 164, 0));
+  background: linear-gradient(rgb(var(--glow-rgb) / 0.5) 0%, rgb(var(--glow-rgb) / 0.38) 80%, rgb(var(--glow-rgb) / 0));
 }
 /* по нитці час від часу біжить вогник, як на екрані входу */
 .list::after {
   content: ''; position: absolute; left: calc(var(--pad) - 27px); top: -44px; width: 3px; height: 14px; border-radius: 2px;
-  background: linear-gradient(rgba(210, 255, 230, 0), #d2ffe6); box-shadow: 0 0 8px var(--glow);
+  background: linear-gradient(rgb(var(--spark-rgb) / 0), var(--spark)); box-shadow: 0 0 8px var(--glow);
   opacity: 0; pointer-events: none;
   animation: spark 7s ease-in 1.8s infinite;
 }
@@ -352,7 +352,7 @@ onMounted(load);
  
 .item {
   position: relative; display: flex; align-items: center; gap: 16px; padding: 14px 14px 14px 14px;
-  background: rgba(20, 32, 26, 0.72); border: 1px solid var(--line); border-radius: 14px;
+  background: rgb(var(--panel-rgb) / 0.72); border: 1px solid var(--line); border-radius: 14px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
   transition: border-color 0.25s ease, background 0.25s ease, box-shadow 0.25s ease;
   animation: fade-up 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
@@ -360,37 +360,37 @@ onMounted(load);
 /* вузол на нитці — там, де гілка відходить від неї */
 .item::before {
   content: ''; position: absolute; left: -30px; top: calc(50% - var(--curve)); width: 9px; height: 9px; margin-top: -4.5px;
-  border-radius: 50%; background: #0f1713; border: 1.5px solid rgba(126, 224, 164, 0.7); box-sizing: border-box;
+  border-radius: 50%; background: var(--bg); border: 1.5px solid rgb(var(--glow-rgb) / 0.7); box-sizing: border-box;
   transition: background 0.25s, box-shadow 0.25s, transform 0.25s;
 }
 /* гілочка плавно вигинається від нитки до картки */
 .item::after {
   content: ''; position: absolute; left: -26px; top: calc(50% - var(--curve)); width: 26px; height: var(--curve);
-  border-left: 1px solid rgba(126, 224, 164, 0.32); border-bottom: 1px solid rgba(126, 224, 164, 0.32);
+  border-left: 1px solid rgb(var(--glow-rgb) / 0.32); border-bottom: 1px solid rgb(var(--glow-rgb) / 0.32);
   border-bottom-left-radius: var(--curve); pointer-events: none;
   transition: border-color 0.25s;
 }
 .item:hover {
-  border-color: rgba(126, 224, 164, 0.4); background: rgba(24, 38, 31, 0.85);
-  box-shadow: 0 0 0 1px rgba(126, 224, 164, 0.06), 0 14px 40px rgba(0, 0, 0, 0.4);
+  border-color: rgb(var(--glow-rgb) / 0.4); background: rgba(24, 38, 31, 0.85);
+  box-shadow: 0 0 0 1px rgb(var(--glow-rgb) / 0.06), 0 14px 40px rgba(0, 0, 0, 0.4);
 }
 .item:hover::before { background: var(--glow); box-shadow: 0 0 12px var(--glow); transform: scale(1.2); }
-.item:hover::after { border-color: rgba(126, 224, 164, 0.75); }
+.item:hover::after { border-color: rgb(var(--glow-rgb) / 0.75); }
  
 /* ── Відбиток спори: у кожної карти свій ── */
 .print {
   flex: none; width: 56px; height: 56px; box-sizing: border-box; padding: 2px;
-  background: radial-gradient(circle at 50% 55%, rgba(126, 224, 164, 0.12), rgba(8, 16, 12, 0.55) 70%);
+  background: radial-gradient(circle at 50% 55%, rgb(var(--glow-rgb) / 0.12), rgb(var(--deep-rgb) / 0.55) 70%);
   border: 1px solid var(--line); border-radius: 13px;
-  filter: drop-shadow(0 0 4px rgba(126, 224, 164, 0.25));
+  filter: drop-shadow(0 0 4px rgb(var(--glow-rgb) / 0.25));
   transition: border-color 0.25s, filter 0.25s;
 }
 .print path {
-  fill: none; stroke: rgba(126, 224, 164, 0.7); stroke-width: 1.15; stroke-linecap: round;
+  fill: none; stroke: rgb(var(--glow-rgb) / 0.7); stroke-width: 1.15; stroke-linecap: round;
   stroke-dasharray: 1; stroke-dashoffset: 0;
 }
-.print circle { fill: #d2ffe6; }
-.item:hover .print { border-color: rgba(126, 224, 164, 0.5); filter: drop-shadow(0 0 6px rgba(126, 224, 164, 0.5)); }
+.print circle { fill: var(--spark); }
+.item:hover .print { border-color: rgb(var(--glow-rgb) / 0.5); filter: drop-shadow(0 0 6px rgb(var(--glow-rgb) / 0.5)); }
 /* при наведенні гілки відростають заново */
 .item:hover .print path { animation: grow 1s cubic-bezier(0.3, 0.6, 0.2, 1) both; }
 @keyframes grow { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
@@ -435,15 +435,15 @@ onMounted(load);
   padding: 9px 14px; font: inherit; font-size: 0.9rem; font-weight: 600; border: 1px solid transparent; border-radius: 9px;
   cursor: pointer; transition: filter 0.2s, background 0.2s, border-color 0.2s;
 }
-.btn-ghost { color: var(--soft); background: rgba(126, 224, 164, 0.08); border-color: var(--line); }
-.btn-ghost:hover { background: rgba(126, 224, 164, 0.16); border-color: rgba(126, 224, 164, 0.45); }
+.btn-ghost { color: var(--soft); background: rgb(var(--glow-rgb) / 0.08); border-color: var(--line); }
+.btn-ghost:hover { background: rgb(var(--glow-rgb) / 0.16); border-color: rgb(var(--glow-rgb) / 0.45); }
 .btn-danger { color: #2a0b07; background: linear-gradient(180deg, #ffb4a6, #f0877a); }
 .btn-danger:hover { filter: brightness(1.07); }
  
 /* ── Завантаження і порожній стан ── */
 .skeleton {
   height: 86px; border: 1px solid var(--line); border-radius: 14px;
-  background: linear-gradient(90deg, rgba(20, 32, 26, 0.6) 25%, rgba(126, 224, 164, 0.09) 50%, rgba(20, 32, 26, 0.6) 75%);
+  background: linear-gradient(90deg, rgb(var(--panel-rgb) / 0.6) 25%, rgb(var(--glow-rgb) / 0.09) 50%, rgb(var(--panel-rgb) / 0.6) 75%);
   background-size: 220% 100%; animation: shimmer 1.8s ease-in-out infinite;
 }
 @keyframes shimmer { from { background-position: 120% 0; } to { background-position: -120% 0; } }
@@ -451,7 +451,7 @@ onMounted(load);
 .empty {
   display: grid; justify-items: center; gap: 6px;
   padding: 32px 24px 36px; text-align: center; border: 1px dashed var(--line); border-radius: 18px;
-  background: rgba(20, 32, 26, 0.4);
+  background: rgb(var(--panel-rgb) / 0.4);
   animation: fade-up 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) 0.2s both;
 }
 .empty p {
@@ -461,21 +461,21 @@ onMounted(load);
 /* «насінина»: один вузол, з якого вже тягнуться перші нитки */
 .seed { width: 132px; height: auto; margin-bottom: 6px; overflow: visible; }
 .seed path {
-  fill: none; stroke: rgba(126, 224, 164, 0.4); stroke-width: 1.2; stroke-linecap: round;
+  fill: none; stroke: rgb(var(--glow-rgb) / 0.4); stroke-width: 1.2; stroke-linecap: round;
 }
-.seed .tip { fill: rgba(210, 255, 230, 0.7); }
+.seed .tip { fill: rgb(var(--spark-rgb) / 0.7); }
 .seed .root {
-  fill: #d2ffe6; filter: drop-shadow(0 0 6px var(--glow));
+  fill: var(--spark); filter: drop-shadow(0 0 6px var(--glow));
   animation: pulse 3.6s ease-in-out infinite;
 }
 @keyframes pulse { 50% { opacity: 0.55; } }
  
 .empty-cta {
   margin-top: 14px; padding: 10px 20px; font: inherit; font-size: 0.95rem; font-weight: 600; color: var(--glow);
-  background: rgba(126, 224, 164, 0.08); border: 1px solid rgba(126, 224, 164, 0.4); border-radius: 11px; cursor: pointer;
+  background: rgb(var(--glow-rgb) / 0.08); border: 1px solid rgb(var(--glow-rgb) / 0.4); border-radius: 11px; cursor: pointer;
   transition: background 0.2s, border-color 0.2s;
 }
-.empty-cta:hover { background: rgba(126, 224, 164, 0.16); border-color: rgba(126, 224, 164, 0.7); }
+.empty-cta:hover { background: rgb(var(--glow-rgb) / 0.16); border-color: rgb(var(--glow-rgb) / 0.7); }
  
 @keyframes fade-up { from { opacity: 0; transform: translateY(14px); } }
 @keyframes fade-in { from { opacity: 0; } }

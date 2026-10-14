@@ -63,6 +63,6 @@ describe('шаблони карт', () => {
 
   it('без theme і layout карта з шаблону отримує ті самі умовчання, що й звичайна', async () => {
     const res = await agent.post('/api/maps').send({ title: 'T', template: 'project' });
-    expect(res.body.map).toMatchObject({ theme: 'forest', layout: 'bilateral' });
+    expect(res.body.map).toMatchObject({ theme: 'berry', layout: 'bilateral' });
   });
 });

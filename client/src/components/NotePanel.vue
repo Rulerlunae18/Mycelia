@@ -73,11 +73,11 @@ h2 .muted { font-style: italic; font-weight: 500; color: var(--soft); }
 .note {
   display: block; width: 100%; margin-top: 12px; padding: 12px 14px; box-sizing: border-box; resize: vertical;
   min-height: 8em; max-height: 60vh; font: inherit; line-height: 1.55; color: var(--ink);
-  background: rgba(8, 16, 12, 0.55); border: 1px solid var(--line); border-radius: 12px;
+  background: rgb(var(--deep-rgb) / 0.55); border: 1px solid var(--line); border-radius: 12px;
   transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
 }
-.note::placeholder { color: rgba(180, 207, 191, 0.45); }
-.note:focus { outline: none; border-color: rgba(126, 224, 164, 0.6); background: rgba(8, 16, 12, 0.8); box-shadow: 0 0 0 3px rgba(126, 224, 164, 0.12); }
+.note::placeholder { color: color-mix(in srgb, var(--soft) 45%, transparent); }
+.note:focus { outline: none; border-color: rgb(var(--glow-rgb) / 0.6); background: rgb(var(--deep-rgb) / 0.8); box-shadow: 0 0 0 3px rgb(var(--glow-rgb) / 0.12); }
 .count { margin: 6px 0 0; font-size: 0.8rem; text-align: right; }
 .count.near { color: var(--danger); }
 </style>

@@ -12,7 +12,7 @@ export const credentialsSchema = z.object({
 
 export const LAYOUTS = ['radial', 'tree', 'bilateral'];
 // Назви тем збігаються з THEME_NAMES клієнта (client/src/core/theme)
-export const THEMES = ['forest', 'paper', 'ocean'];
+export const THEMES = ['berry', 'forest', 'paper', 'ocean'];
 
 export const createMapSchema = z.object({
   title: z.string().trim().min(1, 'Назва не може бути порожньою').max(120),
