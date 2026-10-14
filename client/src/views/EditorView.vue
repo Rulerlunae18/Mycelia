@@ -21,6 +21,26 @@ const tabs = useTabsStore();
 const error = ref('');
 const canvas = ref(null);
 const uploading = ref(false);
+const notice = ref('');
+let noticeTimer = 0;
+function say(text) {
+  notice.value = text;
+  clearTimeout(noticeTimer);
+  noticeTimer = setTimeout(() => (notice.value = ''), 3500);
+}
+const nodesWord = (n) => (n % 10 === 1 && n % 100 !== 11 ? 'вузол' : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? 'вузли' : 'вузлів');
+const copyNode = (id = store.selectedId) => {
+  const info = store.copyBranch(id);
+  if (info) say(`Скопійовано «${info.title || 'без тексту'}»: ${info.count} ${nodesWord(info.count)}`);
+};
+const cutNode = (id = store.selectedId) => run(async () => {
+  const info = await store.cutBranch(id);
+  if (info) say(`Вирізано «${info.title || 'без тексту'}»: ${info.count} ${nodesWord(info.count)}. Вставити: Ctrl+V`);
+});
+const pasteNode = (id = store.selectedId) => run(async () => {
+  const done = await store.pasteBranch(id);
+  say(`Вставлено «${done.title || 'без тексту'}»: ${done.count} ${nodesWord(done.count)}`);
+});
 
 async function openMap(id) {
   error.value = '';
@@ -101,6 +121,7 @@ function removeSelected(id = store.selectedId) {
   <div class="editor">
     <MapTabs :tabs="tabs.tabs" :active-id="route.params.id" @close="closeTab" @rename="renameTab" />
     <p v-if="error" class="error" role="alert">{{ error }}</p>
+    <p v-if="notice" class="notice" role="status">{{ notice }}</p>
 
     <template v-if="store.map">
       <header class="head">
@@ -161,6 +182,12 @@ function removeSelected(id = store.selectedId) {
           <span class="acts">
             <button class="btn btn-small" @click="canvas?.edit(store.selectedId)">✎ Текст</button>
             <button class="btn btn-small" @click="addChild()">＋ Вкладений</button>
+            <button class="btn btn-small" title="Скопіювати гілку в буфер (Ctrl+C)" @click="copyNode()">⎘ Копіювати</button>
+            <button
+              class="btn btn-small" :disabled="!store.clipboardInfo"
+              :title="store.clipboardInfo ? `Вставити «${store.clipboardInfo.title}» (${store.clipboardInfo.count}) всередину вибраного (Ctrl+V)` : 'Буфер порожній: скопіюй гілку'"
+              @click="pasteNode()"
+            >⎗ Вставити</button>
             <button v-if="!store.selected.isRoot" class="btn btn-small" title="Копія вузла з усіма вкладеними, одразу після нього" @click="run(() => store.duplicate(store.selectedId))">⧉ Дублювати</button>
             <button class="btn btn-small" title="Пунктирна область навколо вузла і всієї його гілки" @click="run(() => store.addBoundaryForBranch(store.selectedId))">▢ Обвести</button>
             <button v-if="!store.selected.isRoot" class="btn btn-small btn-danger" @click="removeSelected()">✕ Видалити</button>
@@ -184,13 +211,16 @@ function removeSelected(id = store.selectedId) {
         @add-child="addChild"
         @add-sibling="addSibling"
         @remove="removeSelected"
+        @copy="copyNode"
+        @cut="cutNode"
+        @paste="pasteNode"
         @undo="run(() => store.undo())"
         @redo="run(() => store.redo())"
         @move="({ id, parentId, index }) => run(() => store.moveAndReveal(id, parentId, index))"
       />
       <p class="hint">
         Колесо миші: масштаб · перетягни фон, щоб посунути карту · подвійний клік по вузлу згортає і розгортає гілку · тягни вузол на середину іншого, щоб зробити його дитиною, або на край, щоб змінити порядок.
-        <br />Клавіші: <kbd>Tab</kbd> вкладений · <kbd>Enter</kbd> сусід · <kbd>F2</kbd> текст · <kbd>F</kbd> на весь екран · <kbd>Delete</kbd> видалити · <kbd>Esc</kbd> зняти виділення · <kbd>Ctrl+Z</kbd> скасувати · <kbd>Ctrl+Shift+Z</kbd> повторити.
+        <br />Клавіші: <kbd>Tab</kbd> вкладений · <kbd>Enter</kbd> сусід · <kbd>F2</kbd> текст · <kbd>F</kbd> на весь екран · <kbd>Delete</kbd> видалити · <kbd>Esc</kbd> зняти виділення · <kbd>Ctrl+C</kbd> <kbd>Ctrl+X</kbd> <kbd>Ctrl+V</kbd> копіювати, вирізати, вставити гілку · <kbd>Ctrl+Z</kbd> скасувати · <kbd>Ctrl+Shift+Z</kbd> повторити.
       </p>
 
       <div v-if="store.selected && store.map" class="panels">
@@ -268,6 +298,7 @@ function removeSelected(id = store.selectedId) {
 }
 .acts { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
 
+.notice { margin: 0 0 12px; font-family: var(--serif); font-style: italic; font-size: 1.15rem; color: var(--glow); }
 .hint { margin: 14px 2px 22px; font-size: 0.85rem; line-height: 1.7; color: var(--muted); }
 
 /* ── Нотатка і вкладення поруч, на вузькому екрані одна під одною ── */

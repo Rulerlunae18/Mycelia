@@ -259,6 +259,107 @@ describe('mapEditor store', () => {
     expect(store.theme).toBe('ocean');
   });
 
+  describe('копіювання і вставка гілок', () => {
+    const echoRestore = () => http.post.mockImplementation(async (_url, body) => ({
+      nodes: body.nodes.map((n) => ({ ...n, mapId: 'm1' })),
+      changes: body.nodes.slice(0, 1).map((n) => ({ id: n.id, parentId: n.parentId, order: n.order })),
+    }));
+
+    it('копіює гілку в буфер, не чіпаючи карту і сервер', () => {
+      const info = store.copyBranch('a');
+      expect(info).toEqual({ count: 2, title: 'A' });
+      expect(store.clipboardInfo).toEqual({ count: 2, title: 'A' });
+      expect(http.post).not.toHaveBeenCalled();
+      expect(store.root.size()).toBe(4);
+    });
+
+    it('вставляє копію дитиною вибраного вузла з новими id і виділяє її', async () => {
+      echoRestore();
+      store.copyBranch('a');
+      store.select('b');
+      const done = await store.pasteBranch();
+      expect(done).toEqual({ count: 2, title: 'A' });
+      const [url, body] = http.post.mock.calls.at(-1);
+      expect(url).toBe('/maps/m1/nodes/restore');
+      expect(body.nodes).toHaveLength(2);
+      expect(body.nodes[0]).toMatchObject({ parentId: 'b', text: 'A', order: 0 });
+      expect(body.nodes[1]).toMatchObject({ parentId: body.nodes[0].id, text: 'A1', order: 0 });
+      expect(body.nodes.map((n) => n.id)).not.toContain('a');
+      expect(store.root.size()).toBe(6);
+      expect(store.root.find('b').children.map((n) => n.text)).toEqual(['A']);
+      expect(store.selectedId).toBe(body.nodes[0].id);
+    });
+
+    it('без вибраного вузла вставляє в корінь, в кінець списку дітей', async () => {
+      echoRestore();
+      store.copyBranch('a1');
+      await store.pasteBranch();
+      expect(http.post.mock.calls.at(-1)[1].nodes[0]).toMatchObject({ parentId: 'r', text: 'A1', order: 2 });
+    });
+
+    it('одну гілку можна вставити кілька разів: кожна копія має свої id', async () => {
+      echoRestore();
+      store.copyBranch('a');
+      await store.pasteBranch('b');
+      await store.pasteBranch('b');
+      expect(store.root.find('b').children).toHaveLength(2);
+      expect(new Set(store.root.walk ? [...store.root.walk()].map((n) => n.id) : []).size).toBe(store.root.size());
+    });
+
+    it('вставка скасовується і повторюється', async () => {
+      echoRestore();
+      store.copyBranch('a');
+      await store.pasteBranch('b');
+      http.delete.mockResolvedValue({ deleted: [], changes: [] });
+      http.delete.mockImplementation(async (url) => {
+        const id = url.split('/').pop();
+        return { deleted: [id, ...store.nodes.filter((n) => n.parentId === id).map((n) => n.id)], changes: [] };
+      });
+      await store.undo();
+      expect(store.root.size()).toBe(4);
+      await store.redo();
+      expect(store.root.size()).toBe(6);
+    });
+
+    it('вставка у згорнутий вузол розгортає його, а скасування згортає назад', async () => {
+      echoRestore();
+      http.patch.mockImplementation(async (_url, data) => ({ node: { id: 'b', ...data } }));
+      await store.toggleCollapsed('b');
+      expect(store.root.find('b').collapsed).toBe(true);
+      store.copyBranch('a1');
+      await store.pasteBranch('b');
+      expect(store.root.find('b').collapsed).toBe(false);
+    });
+
+    it('порожній буфер: зрозуміла помилка і жодного запиту', async () => {
+      await expect(store.pasteBranch('a')).rejects.toThrow('Буфер порожній');
+      expect(http.post).not.toHaveBeenCalled();
+    });
+
+    it('вирізання копіює в буфер і видаляє, корінь вирізати не можна', async () => {
+      http.delete.mockResolvedValue({ deleted: ['a', 'a1'], changes: [{ id: 'b', parentId: 'r', order: 0 }] });
+      expect(await store.cutBranch('r')).toBeNull();
+      expect(http.delete).not.toHaveBeenCalled();
+      const info = await store.cutBranch('a');
+      expect(info).toEqual({ count: 2, title: 'A' });
+      expect(store.root.find('a')).toBeNull();
+      expect(store.clipboardInfo.count).toBe(2);
+    });
+
+    it('буфер переживає завантаження іншої карти: гілку можна перенести між картами', async () => {
+      echoRestore();
+      store.copyBranch('a');
+      http.get.mockResolvedValue({ map: { id: 'm2', title: 'Інша', layout: 'radial', nodes: [row('r2', null, 'Корінь 2')] } });
+      await store.load('m2');
+      expect(store.clipboardInfo).toEqual({ count: 2, title: 'A' });
+      store.select('r2');
+      await store.pasteBranch();
+      const [url, body] = http.post.mock.calls.at(-1);
+      expect(url).toBe('/maps/m2/nodes/restore');
+      expect(body.nodes[0]).toMatchObject({ parentId: 'r2', text: 'A' });
+    });
+  });
+
   describe('скасування і повтор (Command)', () => {
     it('нотатка зберігається, скасовується і повторюється', async () => {
       http.patch.mockImplementation(async (_url, data) => ({ node: { id: 'a', ...data } }));
