@@ -1,4 +1,4 @@
-import { edgePath } from '../geometry.js';
+import { edgePath, linkPath } from '../geometry.js';
 import { boundaryOutline } from '../boundary.js';
 import { LayoutContext } from '../layout/index.js';
 import { CATEGORY_INSET, findCategory, findPriority } from '../marks.js';
@@ -23,7 +23,7 @@ export class MapRenderer {
 
   // layout: назва розкладки, selectedId: виділений вузол, theme: назва теми
   // (стилі дає фабрика теми, Abstract Factory)
-  render(root, { layout, selectedId = null, theme, boundaries = [], attachmentCounts = {} } = {}) {
+  render(root, { layout, selectedId = null, theme, boundaries = [], attachmentCounts = {}, links = [], selectedLinkId = null } = {}) {
     if (layout) this.layout.use(layout);
     const factory = getTheme(theme);
     const { rects, bounds } = this.layout.compute(root);
@@ -56,6 +56,24 @@ export class MapRenderer {
         path: edgePath(rects.get(node.parent.id), rects.get(node.id)),
         depth: node.depth,
         look: factory.createEdgeStyle(node.depth),
+      });
+    }
+
+    // Зв'язки лежать над гілками, під вузлами. Малюємо лише ті, чиї обидва кінці видимі
+    // (згорнута гілка ховає і свої зв'язки).
+    for (const link of links) {
+      const a = rects.get(link.fromId);
+      const b = rects.get(link.toId);
+      if (!a || !b) continue;
+      const selected = link.id === selectedLinkId;
+      backend.drawLink({
+        id: link.id,
+        fromId: link.fromId,
+        toId: link.toId,
+        label: link.label ?? '',
+        ...linkPath(a, b),
+        selected,
+        look: factory.createLinkStyle({ selected }),
       });
     }
 

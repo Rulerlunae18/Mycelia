@@ -12,6 +12,7 @@ describe('Abstract Factory: теми', () => {
       expect(Object.keys(t.createEdgeStyle(1))).toEqual(['stroke', 'width', 'opacity']);
       expect(Object.keys(t.createMarkStyle('category', 'idea'))).toEqual(['fill', 'ink']);
       expect(Object.keys(t.createBoundaryStyle(0))).toEqual(['stroke', 'fill', 'labelColor']);
+      expect(Object.keys(t.createLinkStyle())).toEqual(['stroke', 'width', 'labelColor', 'labelBg', 'selectedStroke']);
       expect(Object.keys(t.createCanvasStyle())).toEqual(['background', 'dot', 'accent', 'ink']);
     }
   });

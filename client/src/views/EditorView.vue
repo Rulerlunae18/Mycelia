@@ -22,6 +22,7 @@ const tabs = useTabsStore();
 const error = ref('');
 const canvas = ref(null);
 const uploading = ref(false);
+const linkFrom = ref(null); // режим зв'язку: вузол-початок, поки не вибрано ціль
 const notice = ref('');
 let noticeTimer = 0;
 function say(text) {
@@ -43,7 +44,27 @@ const pasteNode = (id = store.selectedId) => run(async () => {
   say(`Вставлено «${done.title || 'без тексту'}»: ${done.count} ${nodesWord(done.count)}`);
 });
 
+const textOf = (id) => store.root?.find(id)?.text || 'без тексту';
+const short = (text) => (text.length > 28 ? `${text.slice(0, 27)}…` : text);
+
+function startLink(id = store.selectedId) {
+  if (!id) return;
+  linkFrom.value = linkFrom.value === id ? null : id;
+}
+function pickTarget(id) {
+  const from = linkFrom.value;
+  if (!from) return;
+  if (id === from) { linkFrom.value = null; return; }
+  linkFrom.value = null;
+  run(() => store.addLink(from, id));
+}
+function onSelect(id) {
+  if (!id) linkFrom.value = null;
+  store.select(id);
+}
+
 async function openMap(id) {
+  linkFrom.value = null;
   error.value = '';
   tabs.ensureLoaded();
   try {
@@ -90,9 +111,9 @@ function renameTab({ id, title }) {
 // Експорт: SVG збирає той самий рендерер, що й полотно, але з іншим бекендом (Bridge)
 async function exportAs(kind) {
   const title = store.map.title;
-  if (kind === 'md') return download(new Blob([toMarkdown(store.root)], { type: 'text/markdown;charset=utf-8' }), fileName(title, 'md'));
+  if (kind === 'md') return download(new Blob([toMarkdown(store.root, { links: store.links })], { type: 'text/markdown;charset=utf-8' }), fileName(title, 'md'));
   const svg = renderSvg(store.root, {
-    layout: store.layout, theme: store.theme, boundaries: store.boundaries, attachmentCounts: store.attachmentCounts,
+    layout: store.layout, theme: store.theme, boundaries: store.boundaries, attachmentCounts: store.attachmentCounts, links: store.links,
   });
   if (kind === 'svg') return download(new Blob([svg], { type: 'image/svg+xml;charset=utf-8' }), fileName(title, 'svg'));
   return download(await svgToPng(svg), fileName(title, 'png'));
@@ -180,8 +201,27 @@ function removeSelected(id = store.selectedId) {
         </div>
       </div>
 
-      <div class="pick card" :class="{ idle: !store.selected }" aria-label="Вибраний вузол">
-        <template v-if="store.selected">
+      <div class="pick card" :class="{ idle: !store.selected && !store.selectedLink && !linkFrom }" aria-label="Вибраний вузол">
+        <template v-if="linkFrom">
+          <span class="chip" :title="textOf(linkFrom)">{{ textOf(linkFrom) }}</span>
+          <span class="hintline">→ клацни вузол, до якого веде зв'язок</span>
+          <span class="acts"><button class="btn btn-small" @click="linkFrom = null">Скасувати (Esc)</button></span>
+        </template>
+        <template v-else-if="store.selectedLink">
+          <span class="chip" :title="`${textOf(store.selectedLink.fromId)} → ${textOf(store.selectedLink.toId)}`">
+            {{ short(textOf(store.selectedLink.fromId)) }} → {{ short(textOf(store.selectedLink.toId)) }}
+          </span>
+          <input
+            :key="store.selectedLink.id" :value="store.selectedLink.label ?? ''" class="link-label" maxlength="120"
+            aria-label="Підпис зв'язку" placeholder="Підпис, наприклад «впливає на»"
+            @change="run(() => store.setLinkLabel(store.selectedLink.id, $event.target.value))"
+            @keydown.stop
+          />
+          <span class="acts">
+            <button class="btn btn-small btn-danger" @click="run(() => store.removeLink(store.selectedLink.id))">✕ Видалити зв'язок</button>
+          </span>
+        </template>
+        <template v-else-if="store.selected">
           <span class="chip" :title="store.selected.text">{{ store.selected.text || 'без тексту' }}</span>
           <select
             :value="store.selected.extra.category ?? ''" aria-label="Категорія"
@@ -207,6 +247,7 @@ function removeSelected(id = store.selectedId) {
               @click="pasteNode()"
             >⎗ Вставити</button>
             <button v-if="!store.selected.isRoot" class="btn btn-small" title="Копія вузла з усіма вкладеними, одразу після нього" @click="run(() => store.duplicate(store.selectedId))">⧉ Дублювати</button>
+            <button class="btn btn-small" title="Стрілка від цього вузла до будь-якого іншого, навіть з іншої гілки (L)" @click="startLink()">↔ Зв'язати</button>
             <button class="btn btn-small" title="Пунктирна область навколо вузла і всієї його гілки" @click="run(() => store.addBoundaryForBranch(store.selectedId))">▢ Обвести</button>
             <button v-if="!store.selected.isRoot" class="btn btn-small btn-danger" @click="removeSelected()">✕ Видалити</button>
           </span>
@@ -223,7 +264,15 @@ function removeSelected(id = store.selectedId) {
         :boundaries="store.boundaries"
         :attachment-counts="store.attachmentCounts"
         :selected-id="store.selectedId"
-        @select="store.select"
+        :links="store.links"
+        :selected-link-id="store.selectedLinkId"
+        :link-from="linkFrom"
+        @select="onSelect"
+        @select-link="store.selectLink"
+        @pick="pickTarget"
+        @start-link="startLink"
+        @cancel-link="linkFrom = null"
+        @remove-link="(id) => run(() => store.removeLink(id))"
         @toggle="(id) => run(() => store.toggleCollapsed(id))"
         @rename="({ id, text }) => run(() => store.rename(id, text))"
         @add-child="addChild"
@@ -238,7 +287,7 @@ function removeSelected(id = store.selectedId) {
       />
       <p class="hint">
         Колесо миші: масштаб · перетягни фон, щоб посунути карту · подвійний клік по вузлу згортає і розгортає гілку · тягни вузол на середину іншого, щоб зробити його дитиною, або на край, щоб змінити порядок.
-        <br />Клавіші: <kbd>Tab</kbd> вкладений · <kbd>Enter</kbd> сусід · <kbd>F2</kbd> текст · <kbd>F</kbd> на весь екран · <kbd>Delete</kbd> видалити · <kbd>Esc</kbd> зняти виділення · <kbd>Ctrl+C</kbd> <kbd>Ctrl+X</kbd> <kbd>Ctrl+V</kbd> копіювати, вирізати, вставити гілку · <kbd>Ctrl+Z</kbd> скасувати · <kbd>Ctrl+Shift+Z</kbd> повторити.
+        <br />Клавіші: <kbd>Tab</kbd> вкладений · <kbd>Enter</kbd> сусід · <kbd>F2</kbd> текст · <kbd>F</kbd> на весь екран · <kbd>L</kbd> зв'язати з іншим вузлом · <kbd>Delete</kbd> видалити · <kbd>Esc</kbd> зняти виділення · <kbd>Ctrl+C</kbd> <kbd>Ctrl+X</kbd> <kbd>Ctrl+V</kbd> копіювати, вирізати, вставити гілку · <kbd>Ctrl+Z</kbd> скасувати · <kbd>Ctrl+Shift+Z</kbd> повторити.
       </p>
 
       <div v-if="store.selected && store.map" class="panels">
@@ -272,6 +321,22 @@ function removeSelected(id = store.selectedId) {
             />
             <span class="muted">вузлів: {{ b.nodeIds.length }}</span>
             <button class="btn btn-small btn-danger" :aria-label="`Видалити область ${b.label}`" @click="run(() => store.removeBoundary(b.id))">✕</button>
+          </li>
+        </ul>
+      </details>
+
+      <details v-if="store.links.length" class="card outline" open>
+        <summary>Зв'язки <span class="muted">{{ store.links.length }}</span></summary>
+        <ul class="areas">
+          <li v-for="l in store.links" :key="l.id" :class="{ current: l.id === store.selectedLinkId }">
+            <button class="link-ends" :title="`${textOf(l.fromId)} → ${textOf(l.toId)}`" @click="store.selectLink(l.id)">
+              {{ short(textOf(l.fromId)) }} → {{ short(textOf(l.toId)) }}
+            </button>
+            <input
+              :value="l.label ?? ''" class="area-name" maxlength="120" aria-label="Підпис зв'язку" placeholder="Без підпису"
+              @change="run(() => store.setLinkLabel(l.id, $event.target.value))"
+            />
+            <button class="btn btn-small btn-danger" :aria-label="`Видалити зв'язок ${textOf(l.fromId)} → ${textOf(l.toId)}`" @click="run(() => store.removeLink(l.id))">✕</button>
           </li>
         </ul>
       </details>
@@ -337,6 +402,13 @@ function removeSelected(id = store.selectedId) {
 .areas { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 8px; }
 .areas li { display: flex; align-items: center; gap: 10px; }
 .area-name { flex: 1; max-width: 360px; }
+.link-label { flex: 1; min-width: 200px; max-width: 360px; }
+.link-ends {
+  max-width: 34ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 4px 12px; cursor: pointer;
+  font-family: var(--serif); font-size: 1.05rem; color: var(--ink); background: rgba(8, 16, 12, 0.5);
+  border: 1px solid rgba(126, 224, 164, 0.3); border-radius: 999px;
+}
+.link-ends:hover, .areas li.current .link-ends { border-color: var(--glow); box-shadow: 0 0 10px rgba(126, 224, 164, 0.25); }
 .tree { margin: 12px 0 0; padding: 0; }
 .note { margin: 16px 0 0; font-size: 0.875rem; }
 </style>

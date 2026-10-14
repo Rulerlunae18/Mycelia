@@ -551,4 +551,89 @@ describe('mapEditor store', () => {
       expect(store.root.find('b')).toBeNull();
     });
   });
+
+  describe("зв'язки між вузлами", () => {
+    let seq = 0;
+    beforeEach(() => {
+      seq = 0;
+      http.post.mockImplementation(async (url, body) => ({ link: { id: `l${++seq}`, mapId: 'm1', ...body } }));
+    });
+
+    it('addLink створює зв\'язок, виділяє його, скасування і повтор працюють', async () => {
+      await store.addLink('a1', 'b', 'впливає на');
+      expect(http.post).toHaveBeenCalledWith('/maps/m1/links', { fromId: 'a1', toId: 'b', label: 'впливає на' });
+      expect(store.links).toHaveLength(1);
+      expect(store.selectedLinkId).toBe('l1');
+      expect(store.selectedLink.label).toBe('впливає на');
+
+      http.delete.mockResolvedValue({});
+      await store.undo();
+      expect(http.delete).toHaveBeenCalledWith('/maps/m1/links/l1');
+      expect(store.links).toHaveLength(0);
+      expect(store.selectedLinkId).toBeNull();
+
+      await store.redo();
+      expect(store.links.map((l) => [l.fromId, l.toId])).toEqual([['a1', 'b']]);
+    });
+
+    it('підпис змінюється і відкочується; порожній підпис стає null', async () => {
+      await store.addLink('a', 'b');
+      http.patch.mockImplementation(async (_u, data) => ({ link: { id: 'l1', ...data } }));
+      await store.setLinkLabel('l1', '  залежить  ');
+      expect(http.patch).toHaveBeenCalledWith('/maps/m1/links/l1', { label: 'залежить' });
+      expect(store.links[0].label).toBe('залежить');
+      await store.setLinkLabel('l1', 'залежить'); // без змін: нічого не шле
+      expect(http.patch).toHaveBeenCalledTimes(1);
+      await store.undo();
+      expect(store.links[0].label).toBeNull();
+    });
+
+    it('видалення зв\'язку відкочується: зв\'язок повертається з тим самим підписом', async () => {
+      await store.addLink('a', 'b', 'x');
+      http.delete.mockResolvedValue({});
+      await store.removeLink('l1');
+      expect(store.links).toHaveLength(0);
+      await store.undo();
+      expect(store.links).toMatchObject([{ fromId: 'a', toId: 'b', label: 'x' }]);
+    });
+
+    it('видалення вузла прибирає його зв\'язки, а скасування повертає їх разом із гілкою', async () => {
+      await store.addLink('a1', 'b', 'до B');
+      await store.addLink('b', 'r');
+      http.delete.mockResolvedValue({ deleted: ['a', 'a1'], changes: [] });
+      await store.remove('a');
+      expect(store.links.map((l) => `${l.fromId}>${l.toId}`)).toEqual(['b>r']);
+
+      http.post.mockImplementation(async (url, body) => (url.endsWith('/restore')
+        ? { nodes: body.nodes, changes: [] }
+        : { link: { id: `l${++seq}`, ...body } }));
+      await store.undo();
+      expect(store.links.map((l) => `${l.fromId}>${l.toId}`).sort()).toEqual(['a1>b', 'b>r']);
+      expect(store.links.find((l) => l.fromId === 'a1').label).toBe('до B');
+    });
+
+    it('після відновлення з новим id скасування раніших дій усе ще знаходить зв\'язок за парою вузлів', async () => {
+      await store.addLink('a', 'b');
+      http.delete.mockResolvedValue({});
+      await store.removeLink('l1');
+      await store.undo(); // зв'язок знову є, але вже з id l2
+      expect(store.links[0].id).toBe('l2');
+      await store.undo(); // скасовує додавання: має видалити саме l2
+      expect(http.delete).toHaveBeenLastCalledWith('/maps/m1/links/l2');
+      expect(store.links).toHaveLength(0);
+    });
+
+    it('load підхоплює зв\'язки карти і скидає виділення', async () => {
+      http.get.mockResolvedValue({
+        map: { id: 'm1', title: 'К', layout: 'radial', nodes: [row('r', null, 'R'), row('a', 'r', 'A')], links: [{ id: 'z', fromId: 'a', toId: 'r', label: null }] },
+      });
+      await store.load('m1');
+      expect(store.links).toHaveLength(1);
+      expect(store.map.links).toBeUndefined();
+      store.selectLink('z');
+      expect(store.selectedId).toBeNull();
+      store.select('a');
+      expect(store.selectedLinkId).toBeNull();
+    });
+  });
 });

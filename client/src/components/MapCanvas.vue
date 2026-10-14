@@ -15,12 +15,15 @@ const props = defineProps({
   theme: { type: String, default: 'forest' },
   boundaries: { type: Array, default: () => [] },
   attachmentCounts: { type: Object, default: () => ({}) },
+  links: { type: Array, default: () => [] },
+  selectedLinkId: { type: String, default: null },
+  linkFrom: { type: String, default: null }, // вузол, від якого зараз тягнемо зв'язок
 });
-const emit = defineEmits(['select', 'toggle', 'move', 'rename', 'add-child', 'add-sibling', 'remove', 'undo', 'redo', 'copy', 'cut', 'paste']);
+const emit = defineEmits(['select', 'toggle', 'move', 'rename', 'add-child', 'add-sibling', 'remove', 'undo', 'redo', 'copy', 'cut', 'paste', 'select-link', 'pick', 'start-link', 'cancel-link', 'remove-link']);
 
 const renderer = new MapRenderer(new SvgSceneBackend());
 const scene = computed(() =>
-  renderer.render(props.root, { layout: props.layout, selectedId: props.selectedId, theme: props.theme, boundaries: props.boundaries, attachmentCounts: props.attachmentCounts }),
+  renderer.render(props.root, { layout: props.layout, selectedId: props.selectedId, theme: props.theme, boundaries: props.boundaries, attachmentCounts: props.attachmentCounts, links: props.links, selectedLinkId: props.selectedLinkId }),
 );
 
 // Фон і акценти полотна дає тема; решта стилів іде через CSS-змінні
@@ -142,7 +145,7 @@ function finishCarry(commit) {
 }
 
 function onNodeClick(id) {
-  if (!justDragged) emit('select', id);
+  if (!justDragged) emit(props.linkFrom ? 'pick' : 'select', id);
   host.value?.focus({ preventScroll: true }); // щоб гарячі клавіші працювали одразу після кліку
 }
 
@@ -245,8 +248,10 @@ function onKeydown(e) {
   if (e.altKey) return;
   if (e.code === 'KeyF' && !e.shiftKey) { e.preventDefault(); toggleFullscreen(); return; }
   const id = props.selectedId;
-  if (e.key === 'Escape') return emit('select', null);
+  if (e.key === 'Escape') return emit(props.linkFrom ? 'cancel-link' : 'select', null);
+  if (props.selectedLinkId && (e.key === 'Delete' || e.key === 'Backspace')) { e.preventDefault(); return emit('remove-link', props.selectedLinkId); }
   if (!id) return;
+  if (e.code === 'KeyL' && !e.shiftKey) { e.preventDefault(); return emit('start-link', id); }
   if (e.key === 'F2') { e.preventDefault(); edit(id); }
   else if (e.key === 'Enter') { e.preventDefault(); emit('add-sibling', id); }
   else if (e.key === 'Tab') { e.preventDefault(); emit('add-child', id); }
@@ -254,12 +259,14 @@ function onKeydown(e) {
 }
 
 const badgeWidth = (count) => String(count).length * 7 + 18;
+const shortLabel = (text) => (text.length > 28 ? `${text.slice(0, 27)}…` : text);
+const pillWidth = (text) => shortLabel(text).length * 6.4 + 16;
 
 defineExpose({ fit, edit, toggleFullscreen });
 </script>
 
 <template>
-  <div ref="host" class="canvas" data-testid="canvas" tabindex="0" :style="canvasVars" @keydown="onKeydown">
+  <div ref="host" class="canvas" :class="{ linking: !!linkFrom }" data-testid="canvas" tabindex="0" :style="canvasVars" @keydown="onKeydown">
     <svg
       class="surface"
       role="group"
@@ -287,10 +294,32 @@ defineExpose({ fit, edit, toggleFullscreen });
         />
 
         <g
+          v-for="l in scene.links"
+          :key="l.id"
+          class="link"
+          :class="{ selected: l.selected }"
+          :style="{ '--l-stroke': l.look.stroke, '--l-w': l.look.width, '--l-ink': l.look.labelColor, '--l-bg': l.look.labelBg }"
+          :data-link-id="l.id"
+          role="button"
+          :aria-label="`Зв'язок${l.label ? ': ' + l.label : ''}`"
+          @pointerdown.stop
+          @click.stop="emit('select-link', l.id)"
+        >
+          <title>{{ l.label || "Зв'язок" }}</title>
+          <path class="hit" :d="l.d" />
+          <path class="line" :d="l.d" />
+          <path class="head" :d="l.arrow" />
+          <g v-if="l.label" class="pill" :transform="`translate(${l.labelAt.x} ${l.labelAt.y})`">
+            <rect :x="-pillWidth(l.label) / 2" y="-10" :width="pillWidth(l.label)" height="20" rx="10" />
+            <text>{{ shortLabel(l.label) }}</text>
+          </g>
+        </g>
+
+        <g
           v-for="n in scene.nodes"
           :key="n.id"
           class="node"
-          :class="{ root: n.isRoot, selected: n.selected, folded: n.collapsed, dragging: carry?.active && carry.id === n.id }"
+          :class="{ root: n.isRoot, selected: n.selected, folded: n.collapsed, source: n.id === linkFrom, targeting: !!linkFrom, dragging: carry?.active && carry.id === n.id }"
           :transform="`translate(${n.rect.x + (carry?.active && carry.id === n.id ? carry.dx : 0)} ${n.rect.y + (carry?.active && carry.id === n.id ? carry.dy : 0)})`"
           role="button"
           tabindex="-1"
@@ -381,6 +410,18 @@ defineExpose({ fit, edit, toggleFullscreen });
 .surface { width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; user-select: none; }
 .surface:active { cursor: grabbing; }
 
+.link { cursor: pointer; outline: none; }
+.link .hit { fill: none; stroke: transparent; stroke-width: 16; pointer-events: stroke; }
+.link .line { fill: none; stroke: var(--l-stroke); stroke-width: var(--l-w); stroke-dasharray: 7 5; stroke-linecap: round; pointer-events: none; }
+.link .head { fill: var(--l-stroke); stroke: var(--l-stroke); stroke-width: 1; stroke-linejoin: round; pointer-events: none; }
+.link.selected .line { stroke-dasharray: none; filter: drop-shadow(0 0 4px var(--l-stroke)); }
+.link:hover .line { stroke-width: calc(var(--l-w) + 1); }
+.link .pill rect { fill: var(--l-bg); stroke: var(--l-stroke); stroke-width: 1; }
+.link .pill text { fill: var(--l-ink); font-size: 11px; text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+.canvas.linking .surface { cursor: crosshair; }
+.node.targeting { cursor: crosshair; }
+.node.source rect { stroke: var(--c-accent); stroke-width: 3; stroke-dasharray: 6 4; }
+.canvas.linking .node:not(.source):hover rect { stroke: var(--c-accent); stroke-width: 3; }
 .boundary path { stroke-width: 2; stroke-dasharray: 9 6; stroke-linecap: round; }
 .boundary text { font-size: 12px; font-weight: 700; }
 .edge { fill: none; stroke-linecap: round; }

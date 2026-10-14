@@ -1,5 +1,5 @@
 import { ThemeFactory } from './ThemeFactory.js';
-import { BoundaryStyle, CanvasStyle, EdgeStyle, MarkStyle, NodeStyle } from './products.js';
+import { BoundaryStyle, CanvasStyle, EdgeStyle, LinkStyle, MarkStyle, NodeStyle } from './products.js';
 import { inkOn, withAlpha } from './contrast.js';
 
 // Спільна реалізація «з палітри»: конкретна тема лише називає себе і дає палітру.
@@ -42,6 +42,15 @@ class PaletteTheme extends ThemeFactory {
     return new BoundaryStyle({ stroke: color, fill: withAlpha(color, 0.08), labelColor: color });
   }
 
+  // Зв'язки відрізняються від гілок кольором (другий акцент теми) і штрихом, щоб не плутались з деревом
+  createLinkStyle({ selected = false } = {}) {
+    const { p } = this;
+    return new LinkStyle({
+      stroke: selected ? p.accent : p.link, width: selected ? 2.6 : 1.8,
+      labelColor: p.text, labelBg: p.canvas, selectedStroke: p.accent,
+    });
+  }
+
   createCanvasStyle() {
     const { p } = this;
     return new CanvasStyle({ background: p.canvas, dot: p.dot, accent: p.accent, ink: p.text });
@@ -60,15 +69,15 @@ const LIGHT_MARKS = {
 // Три родини: лісова (за замовчуванням), паперова світла, океан
 export const ForestTheme = new PaletteTheme('forest', 'Ліс', {
   canvas: '#16221c', dot: 'rgba(126, 224, 164, 0.12)', node: '#1d2d25', nodeBorder: '#2f4a3b',
-  text: '#e6efe9', accent: '#7ee0a4', accentInk: '#0a1f14', edge: '#7ee0a4', ...DARK_MARKS,
+  text: '#e6efe9', accent: '#7ee0a4', accentInk: '#0a1f14', edge: '#7ee0a4', link: '#f4c95d', ...DARK_MARKS,
 });
 
 export const PaperTheme = new PaletteTheme('paper', 'Папір', {
   canvas: '#f6f1e7', dot: 'rgba(90, 70, 40, 0.14)', node: '#fffaf0', nodeBorder: '#cdbd9f',
-  text: '#2b2418', accent: '#1f6f50', accentInk: '#ffffff', edge: '#8a7a5c', ...LIGHT_MARKS,
+  text: '#2b2418', accent: '#1f6f50', accentInk: '#ffffff', edge: '#8a7a5c', link: '#b7791f', ...LIGHT_MARKS,
 });
 
 export const OceanTheme = new PaletteTheme('ocean', 'Океан', {
   canvas: '#0f1b2d', dot: 'rgba(120, 180, 255, 0.12)', node: '#162a45', nodeBorder: '#2d4a73',
-  text: '#e4edf9', accent: '#6cb4ff', accentInk: '#06182e', edge: '#6cb4ff', ...DARK_MARKS,
+  text: '#e4edf9', accent: '#6cb4ff', accentInk: '#06182e', edge: '#6cb4ff', link: '#ffb454', ...DARK_MARKS,
 });

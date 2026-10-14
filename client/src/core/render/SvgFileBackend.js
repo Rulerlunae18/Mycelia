@@ -8,13 +8,14 @@ const MARGIN = 16; // білий проміжок навколо карти, щ�
 export const escapeXml = (value) =>
   String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' })[c]);
 
+const shorten = (text) => (text.length > 40 ? `${text.slice(0, 39)}…` : text);
 const badgeWidth = (count) => String(count).length * 7 + 18;
 
 export class SvgFileBackend {
   begin(bounds, canvas) {
     this.bounds = bounds;
     this.canvas = canvas;
-    this.layers = { boundaries: [], edges: [], nodes: [] };
+    this.layers = { boundaries: [], edges: [], links: [], nodes: [] };
   }
 
   drawBoundary({ label, path, labelAt, look }) {
@@ -30,6 +31,22 @@ export class SvgFileBackend {
     this.layers.edges.push(
       `<path d="${path}" fill="none" stroke="${escapeXml(look.stroke)}" stroke-opacity="${look.opacity}" stroke-width="${look.width}" stroke-linecap="round" />`,
     );
+  }
+
+  drawLink({ d, arrow, label, labelAt, look }) {
+    const stroke = escapeXml(look.stroke);
+    const parts = [
+      `<path d="${d}" fill="none" stroke="${stroke}" stroke-width="${look.width}" stroke-dasharray="7 5" stroke-linecap="round" />`,
+      `<path d="${arrow}" fill="${stroke}" stroke="${stroke}" stroke-width="1" stroke-linejoin="round" />`,
+    ];
+    if (label) {
+      const w = Math.min(label.length, 40) * 6.4 + 14;
+      parts.push(
+        `<rect x="${labelAt.x - w / 2}" y="${labelAt.y - 10}" width="${w}" height="20" rx="10" fill="${escapeXml(look.labelBg)}" stroke="${stroke}" stroke-width="1" />`,
+        `<text x="${labelAt.x}" y="${labelAt.y}" text-anchor="middle" dominant-baseline="central" font-size="11" fill="${escapeXml(look.labelColor)}">${escapeXml(shorten(label))}</text>`,
+      );
+    }
+    this.layers.links.push(`<g>${parts.join('')}</g>`);
   }
 
   drawNode(node) {
@@ -83,6 +100,7 @@ export class SvgFileBackend {
       `<rect x="${-MARGIN}" y="${-MARGIN}" width="${w}" height="${h}" fill="${escapeXml(this.canvas.background)}" />`,
       ...this.layers.boundaries,
       ...this.layers.edges,
+      ...this.layers.links,
       ...this.layers.nodes,
       '</svg>',
     ].join('\n');

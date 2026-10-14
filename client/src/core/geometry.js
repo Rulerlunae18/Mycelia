@@ -44,3 +44,47 @@ export function edgePath(from, to) {
   const mid = (y1 + y2) / 2;
   return `M${round(x1)} ${round(y1)}C${round(x1)} ${round(mid)} ${round(x2)} ${round(mid)} ${round(x2)} ${round(y2)}`;
 }
+
+// Точка, де промінь із центра прямокутника в бік (tx, ty) виходить за його межі
+function exitPoint(r, tx, ty) {
+  const c = centerOf(r);
+  const dx = tx - c.x;
+  const dy = ty - c.y;
+  if (dx === 0 && dy === 0) return c;
+  const k = Math.min(dx !== 0 ? r.width / 2 / Math.abs(dx) : Infinity, dy !== 0 ? r.height / 2 / Math.abs(dy) : Infinity);
+  return { x: c.x + dx * k, y: c.y + dy * k };
+}
+
+const ARROW = 9; // довжина стрілки
+
+// Зв'язок між довільними вузлами: вигнута лінія від краю одного прямокутника до краю
+// іншого зі стрілкою на кінці. Вигин іде вбік від напрямку, тому зв'язки A→B і B→A
+// не накладаються. Повертає шлях лінії, шлях стрілки і точку для підпису.
+export function linkPath(from, to) {
+  const a = centerOf(from);
+  const b = centerOf(to);
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const dist = Math.hypot(dx, dy) || 1;
+  const bow = Math.min(70, 18 + dist * 0.18);
+  const ctrl = { x: (a.x + b.x) / 2 - (dy / dist) * bow, y: (a.y + b.y) / 2 + (dx / dist) * bow };
+
+  const p0 = exitPoint(from, ctrl.x, ctrl.y);
+  const p2 = exitPoint(to, ctrl.x, ctrl.y);
+  const tx = p2.x - ctrl.x;
+  const ty = p2.y - ctrl.y;
+  const tl = Math.hypot(tx, ty) || 1;
+  const ux = tx / tl;
+  const uy = ty / tl;
+
+  // лінія закінчується біля основи стрілки, а вістря торкається краю вузла
+  const base = { x: p2.x - ux * ARROW, y: p2.y - uy * ARROW };
+  const wing = ARROW * 0.5;
+  const arrow = `M${round(p2.x)} ${round(p2.y)}L${round(base.x - uy * wing)} ${round(base.y + ux * wing)}L${round(base.x + uy * wing)} ${round(base.y - ux * wing)}Z`;
+
+  return {
+    d: `M${round(p0.x)} ${round(p0.y)}Q${round(ctrl.x)} ${round(ctrl.y)} ${round(base.x)} ${round(base.y)}`,
+    arrow,
+    labelAt: { x: round(0.25 * p0.x + 0.5 * ctrl.x + 0.25 * p2.x), y: round(0.25 * p0.y + 0.5 * ctrl.y + 0.25 * p2.y) },
+  };
+}
