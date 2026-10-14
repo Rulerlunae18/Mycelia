@@ -135,6 +135,7 @@ npm run dev:client      # http://localhost:5173
 | Bridge | `client/src/core/render/`: `MapRenderer` не знає, чим малює; зараз бекенд `SvgSceneBackend`, Canvas можна додати без змін у рендерері (готово) |
 | SOA | `server/src/services/*` (AuthService, MapService, NodeService готові) |
 | Prototype | `server/src/domain/prototype.js`: `NodePrototype.clone()` робить глибоку незалежну копію гілки; нею користуються «дублювати гілку» (прототип з наявної гілки) і карта з шаблону (`TemplateRegistry` віддає копію зразка) (готово) |
+| Bridge (2-й бекенд) | `client/src/core/render/SvgFileBackend.js`: той самий `MapRenderer` малює у самодостатній SVG-файл, з якого `core/export.js` робить PNG (готово) |
 | Command | `client/src/core/history.js`: `History` (invoker зі стеками скасування/повтору) і команди в `stores/mapEditor.js` (додати, видалити, перемістити, дублювати, перейменувати, згорнути) з `do`/`undo`/`redo` (готово) |
 | Abstract Factory | `client/src/core/theme/`: `ThemeFactory` створює узгоджену родину продуктів (стиль вузла, лінії, значка, полотна); конкретні фабрики Ліс, Папір, Океан (готово) |
 
@@ -242,6 +243,14 @@ npm run dev:client      # http://localhost:5173
 над вибраним вузлом), панелі «Нотатка» і «Вкладення» поруч, а «Області» й «Структура» як згортні
 блоки. Спільні кольори й компоненти (`.card`, `.btn`, `select`, `kbd`) лежать у `client/src/style.css`.
 Фон редактора тихіший за екран входу (`MyceliumBackdrop calm`), сторінка ширша за решту (`meta.wide`).
+
+## Експорт карти
+
+Кнопки «⤓ SVG», «⤓ PNG», «⤓ Markdown» в налаштуваннях карти. SVG збирає той самий `MapRenderer`, що малює полотно,
+але з бекендом `SvgFileBackend` (Bridge): файл самодостатній, без CSS-змінних, у кольорах вибраної теми.
+PNG це той самий SVG, намальований на canvas у двократному масштабі (з обмеженням 8192 пікселі за стороною).
+Markdown зберігає структуру: корінь заголовком, гілки вкладеним списком, значки в дужках, нотатки цитатами.
+У файл потрапляє те, що видно на екрані: згорнуті гілки лишаються згорнутими.
 
 ## Що далі
 

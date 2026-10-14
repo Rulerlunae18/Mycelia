@@ -8,6 +8,7 @@ import MapCanvas from '../components/MapCanvas.vue';
 import MapTabs from '../components/MapTabs.vue';
 import NodeItem from '../components/NodeItem.vue';
 import NotePanel from '../components/NotePanel.vue';
+import { download, fileName, renderSvg, svgToPng, toMarkdown } from '../core/export';
 import { LAYOUTS, LAYOUT_NAMES } from '../core/layout';
 import { CATEGORIES, PRIORITIES } from '../core/marks';
 import { THEMES, THEME_NAMES } from '../core/theme';
@@ -64,6 +65,17 @@ function renameTab({ id, title }) {
     await store.renameMap(title);
     tabs.setTitle(id, title);
   });
+}
+
+// Експорт: SVG збирає той самий рендерер, що й полотно, але з іншим бекендом (Bridge)
+async function exportAs(kind) {
+  const title = store.map.title;
+  if (kind === 'md') return download(new Blob([toMarkdown(store.root)], { type: 'text/markdown;charset=utf-8' }), fileName(title, 'md'));
+  const svg = renderSvg(store.root, {
+    layout: store.layout, theme: store.theme, boundaries: store.boundaries, attachmentCounts: store.attachmentCounts,
+  });
+  if (kind === 'svg') return download(new Blob([svg], { type: 'image/svg+xml;charset=utf-8' }), fileName(title, 'svg'));
+  return download(await svgToPng(svg), fileName(title, 'png'));
 }
 
 async function run(action) {
@@ -126,6 +138,12 @@ function removeSelected(id = store.selectedId) {
             <option v-for="name in THEME_NAMES" :key="name" :value="name">{{ THEMES[name].label }}</option>
           </select>
         </label>
+
+        <div class="seg exports" role="group" aria-label="Експорт карти">
+          <button class="btn btn-small" title="Зберегти карту як векторну картинку" @click="run(() => exportAs('svg'))">⤓ SVG</button>
+          <button class="btn btn-small" title="Зберегти карту як зображення" @click="run(() => exportAs('png'))">⤓ PNG</button>
+          <button class="btn btn-small" title="Зберегти структуру карти як текст" @click="run(() => exportAs('md'))">⤓ Markdown</button>
+        </div>
 
         <div class="seg history" role="group" aria-label="Історія">
           <button
@@ -255,7 +273,7 @@ function removeSelected(id = store.selectedId) {
 .seg .btn:hover { background: rgba(126, 224, 164, 0.12); }
 .seg .btn.active { background: var(--glow); color: var(--accent-ink); box-shadow: 0 0 14px rgba(126, 224, 164, 0.3); }
 .theme { display: inline-flex; align-items: center; gap: 8px; font-size: 0.9rem; }
-.history { margin-left: auto; }
+.exports { margin-left: auto; }
 
 .pick { min-height: 54px; }
 .pick.idle { background: rgba(20, 32, 26, 0.45); border-style: dashed; }
