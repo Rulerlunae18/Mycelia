@@ -1,3 +1,4 @@
+import { asText, countNodes, materialize, snapshotBranch } from '../core/clipboard';
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import { http } from '../api/http';
@@ -40,6 +41,11 @@ export const useMapEditorStore = defineStore('mapEditor', () => {
     Object.fromEntries(nodes.value.filter((n) => n.attachments?.length).map((n) => [n.id, n.attachments.length])),
   );
   const base = () => `/maps/${map.value.id}/nodes`;
+
+  // Буфер гілок живе поза картою: після load() він лишається, тож гілку можна
+  // скопіювати в одній вкладці і вставити в іншій
+  const clipboard = ref(null);
+  const clipboardInfo = computed(() => (clipboard.value ? { count: countNodes(clipboard.value), title: clipboard.value.text } : null));
 
   let loadToken = 0;
 
@@ -305,6 +311,51 @@ export const useMapEditorStore = defineStore('mapEditor', () => {
     return nodes.value.find((n) => n.id === rows[0].id);
   }
 
+  // Копіює гілку в буфер (знімок без id). Системний буфер обміну отримує текстовий список.
+  function copyBranch(id) {
+    const node = root.value?.find(id);
+    if (!node) return null;
+    clipboard.value = snapshotBranch(node);
+    try {
+      if (typeof navigator !== 'undefined') navigator.clipboard?.writeText(asText(node)).catch(() => {});
+    } catch {
+      /* системний буфер недоступний: це не заважає внутрішньому */
+    }
+    return clipboardInfo.value;
+  }
+
+  // Вирізати: копія в буфері + видалення (його можна скасувати, а гілка лишається в буфері)
+  async function cutBranch(id) {
+    const node = root.value?.find(id);
+    if (!node || node.isRoot) return null;
+    const info = copyBranch(id);
+    await remove(id);
+    return info;
+  }
+
+  // Вставляє гілку з буфера дитиною вузла (за замовчуванням вибраного або кореня), нові id.
+  // Скасування видаляє вставлене. Вкладення й області не переносяться.
+  async function pasteBranch(parentId) {
+    if (!clipboard.value) throw new Error('Буфер порожній: виділи вузол і натисни Ctrl+C');
+    const target = root.value?.find(parentId ?? selectedId.value) ?? root.value;
+    const reveal = !!target.collapsed;
+    const rows = materialize(clipboard.value, { parentId: target.id, index: target.children.length });
+    await record({
+      label: 'вставлення гілки',
+      do: async () => {
+        await restoreRows(rows);
+        if (reveal) await patchRaw(target.id, { collapsed: false });
+      },
+      undo: async () => {
+        await removeRaw(rows[0].id);
+        if (reveal) await patchRaw(target.id, { collapsed: true });
+      },
+      focusId: () => rows[0].id,
+    });
+    selectedId.value = rows[0].id;
+    return { count: rows.length, title: rows[0].text };
+  }
+
   // Вантажить файли по одному; перша помилка зупиняє решту й піднімається вгору,
   // але вже завантажені лишаються. Повертає кількість успішно завантажених.
   async function uploadAttachments(nodeId, files) {
@@ -390,6 +441,6 @@ export const useMapEditorStore = defineStore('mapEditor', () => {
 
   return {
     map, nodes, boundaries, error, selectedId, root, layout, theme, selected,
-    load, select, addChild, addChildAndSelect, addSiblingAndSelect, setLayout, setTheme, renameMap, patch, setNote, rename, toggleCollapsed, move, moveAndReveal, duplicate, remove, undo, redo, historyState, uploadAttachments, removeAttachment, selectedAttachments, attachmentCounts, addBoundaryForBranch, renameBoundary, removeBoundary,
+    load, select, addChild, addChildAndSelect, addSiblingAndSelect, setLayout, setTheme, renameMap, patch, setNote, rename, toggleCollapsed, move, moveAndReveal, duplicate, copyBranch, cutBranch, pasteBranch, clipboardInfo, remove, undo, redo, historyState, uploadAttachments, removeAttachment, selectedAttachments, attachmentCounts, addBoundaryForBranch, renameBoundary, removeBoundary,
   };
 });

@@ -16,7 +16,7 @@ const props = defineProps({
   boundaries: { type: Array, default: () => [] },
   attachmentCounts: { type: Object, default: () => ({}) },
 });
-const emit = defineEmits(['select', 'toggle', 'move', 'rename', 'add-child', 'add-sibling', 'remove', 'undo', 'redo']);
+const emit = defineEmits(['select', 'toggle', 'move', 'rename', 'add-child', 'add-sibling', 'remove', 'undo', 'redo', 'copy', 'cut', 'paste']);
 
 const renderer = new MapRenderer(new SvgSceneBackend());
 const scene = computed(() =>
@@ -237,6 +237,9 @@ function onKeydown(e) {
   if ((e.ctrlKey || e.metaKey) && !e.altKey) {
     if (e.code === 'KeyZ') { e.preventDefault(); emit(e.shiftKey ? 'redo' : 'undo'); }
     else if (e.code === 'KeyY') { e.preventDefault(); emit('redo'); }
+    else if (e.code === 'KeyC' && props.selectedId) { e.preventDefault(); emit('copy', props.selectedId); }
+    else if (e.code === 'KeyX' && props.selectedId) { e.preventDefault(); emit('cut', props.selectedId); }
+    else if (e.code === 'KeyV') { e.preventDefault(); emit('paste', props.selectedId); }
     return;
   }
   if (e.altKey) return;
