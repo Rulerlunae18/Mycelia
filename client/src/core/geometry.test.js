@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { centerOf, edgePath } from './geometry.js';
+import { centerOf, edgePath, linkPath } from './geometry.js';
 import { MAX_SCALE, MIN_SCALE, fitTransform, panBy, zoomAt } from './viewport.js';
 
 const rect = (x, y, width = 100, height = 40) => ({ x, y, width, height });
@@ -67,5 +67,38 @@ describe('viewport', () => {
 
   it('panBy зсуває, не змінюючи масштаб', () => {
     expect(panBy({ scale: 2, tx: 1, ty: 2 }, 10, -5)).toEqual({ scale: 2, tx: 11, ty: -3 });
+  });
+});
+
+describe("linkPath (зв'язки)", () => {
+  const nums = (d) => d.match(/-?\d+(\.\d+)?/g).map(Number);
+
+  it('починається і закінчується на краях прямокутників, а не в центрах', () => {
+    const a = rect(0, 0);
+    const b = rect(300, 0);
+    const { d, arrow } = linkPath(a, b);
+    const onEdge = ([x, y], r) =>
+      (Math.abs(x - r.x) < 0.2 || Math.abs(x - (r.x + r.width)) < 0.2 || Math.abs(y - r.y) < 0.2 || Math.abs(y - (r.y + r.height)) < 0.2)
+      && x >= r.x - 0.2 && x <= r.x + r.width + 0.2 && y >= r.y - 0.2 && y <= r.y + r.height + 0.2;
+    expect(onEdge(nums(d).slice(0, 2), a)).toBe(true); // початок на межі A
+    expect(onEdge(nums(arrow).slice(0, 2), b)).toBe(true); // вістря стрілки на межі B
+  });
+
+  it('зв\'язки A→B і B→A згинаються в різні боки', () => {
+    const a = rect(0, 0);
+    const b = rect(300, 200);
+    const ctrlY = (d) => nums(d)[3];
+    const ab = linkPath(a, b);
+    const ba = linkPath(b, a);
+    const mid = (a.y + b.y + 40) / 2;
+    expect(Math.sign(ctrlY(ab.d) - mid)).toBe(-Math.sign(ctrlY(ba.d) - mid));
+    expect(ab.labelAt).not.toEqual(ba.labelAt);
+  });
+
+  it('вузли, що торкаються або збігаються, не дають NaN', () => {
+    for (const [a, b] of [[rect(0, 0), rect(0, 0)], [rect(0, 0), rect(100, 0)], [rect(0, 0), rect(10, 5)]]) {
+      const { d, arrow, labelAt } = linkPath(a, b);
+      expect(`${d}${arrow}${labelAt.x}${labelAt.y}`).not.toMatch(/NaN|Infinity/);
+    }
   });
 });

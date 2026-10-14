@@ -5,8 +5,8 @@ import { MapRenderer } from './render/MapRenderer.js';
 import { SvgFileBackend } from './render/SvgFileBackend.js';
 
 // Той самий рендерер, що малює полотно, але з бекендом, який збирає SVG-файл (Bridge)
-export function renderSvg(root, { layout, theme, boundaries = [], attachmentCounts = {} } = {}) {
-  return new MapRenderer(new SvgFileBackend()).render(root, { layout, theme, boundaries, attachmentCounts });
+export function renderSvg(root, { layout, theme, boundaries = [], attachmentCounts = {}, links = [] } = {}) {
+  return new MapRenderer(new SvgFileBackend()).render(root, { layout, theme, boundaries, attachmentCounts, links });
 }
 
 // Ім'я файла з назви карти: без символів, заборонених у Windows, і без крапок на кінці
@@ -24,7 +24,7 @@ const tagsOf = (node) =>
   [findCategory(node.extra.category)?.label, findPriority(node.extra.priority)?.label].filter(Boolean);
 
 // Структура карти як Markdown: корінь заголовком, далі вкладений список, нотатки цитатою
-export function toMarkdown(root) {
+export function toMarkdown(root, { links = [] } = {}) {
   const lines = [`# ${oneLine(root.text) || 'Без назви'}`];
   const note = (node, indent) => {
     if (!node.extra.note) return;
@@ -43,6 +43,13 @@ export function toMarkdown(root) {
     node.children.forEach((c) => walk(c, depth + 1));
   };
   root.children.forEach((c) => walk(c, 0));
+
+  // Зв'язки між вузлами окремим розділом: «A → B: підпис»
+  const items = links
+    .map((l) => ({ from: root.find(l.fromId), to: root.find(l.toId), label: oneLine(l.label) }))
+    .filter((l) => l.from && l.to)
+    .map((l) => `- ${oneLine(l.from.text) || 'без тексту'} → ${oneLine(l.to.text) || 'без тексту'}${l.label ? `: ${l.label}` : ''}`);
+  if (items.length) lines.push('', "## Зв'язки", '', ...items);
   return `${lines.join('\n').replace(/\n+$/, '')}\n`;
 }
 

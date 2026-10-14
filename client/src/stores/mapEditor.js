@@ -15,6 +15,8 @@ export const useMapEditorStore = defineStore('mapEditor', () => {
   const map = ref(null);
   const nodes = ref([]);
   const boundaries = ref([]); // пунктирні області: { id, label, nodeIds }
+  const links = ref([]); // зв'язки між вузлами: { id, fromId, toId, label }
+  const selectedLinkId = ref(null);
   const error = ref('');
   const selectedId = ref(null);
 
@@ -55,15 +57,18 @@ export const useMapEditorStore = defineStore('mapEditor', () => {
     map.value = null;
     nodes.value = [];
     boundaries.value = [];
+    links.value = [];
     selectedId.value = null;
+    selectedLinkId.value = null;
     history.clear();
     const { map: loaded } = await http.get(`/maps/${mapId}`);
     // Користувач міг уже перейти на іншу вкладку: пізня відповідь не має перезаписати нову карту
     if (token !== loadToken) return;
-    const { nodes: rows, boundaries: areas = [], ...rest } = loaded;
+    const { nodes: rows, boundaries: areas = [], links: arrows = [], ...rest } = loaded;
     map.value = rest;
     nodes.value = rows;
     boundaries.value = areas;
+    links.value = arrows;
   }
 
   // Применяет список { id, parentId, order }, который возвращает сервер
@@ -80,9 +85,16 @@ export const useMapEditorStore = defineStore('mapEditor', () => {
     return node;
   }
 
+  // Виділений може бути або вузол, або зв'язок
   const select = (id) => {
     selectedId.value = id;
+    selectedLinkId.value = null;
   };
+  const selectLink = (id) => {
+    selectedLinkId.value = id;
+    selectedId.value = null;
+  };
+  const selectedLink = computed(() => links.value.find((l) => l.id === selectedLinkId.value) ?? null);
 
   // ---- знімки для команд ----
   const rowOf = (n) => ({
@@ -407,6 +419,9 @@ export const useMapEditorStore = defineStore('mapEditor', () => {
     const gone = new Set(deleted);
     nodes.value = nodes.value.filter((n) => !gone.has(n.id));
     if (gone.has(selectedId.value)) selectedId.value = null;
+    // сервер каскадно прибирає зв'язки видалених вузлів
+    links.value = links.value.filter((l) => !gone.has(l.fromId) && !gone.has(l.toId));
+    if (selectedLinkId.value && !links.value.some((l) => l.id === selectedLinkId.value)) selectedLinkId.value = null;
     // так само, як на сервері: видалені вузли зникають з областей, порожні області теж
     boundaries.value = boundaries.value
       .map((b) => ({ ...b, nodeIds: b.nodeIds.filter((n) => !gone.has(n)) }))
@@ -418,11 +433,80 @@ export const useMapEditorStore = defineStore('mapEditor', () => {
   // Вкладення (файли) і приналежність до областей не відновлюються.
   function remove(id) {
     const rows = branchRows(id);
+    // зв'язки гілки (в тому числі з вузлами поза нею) повертаємо разом із нею
+    const ids = new Set(rows.map((r) => r.id));
+    const lost = links.value.filter((l) => ids.has(l.fromId) || ids.has(l.toId)).map(({ fromId, toId, label }) => ({ fromId, toId, label }));
     return record({
       label: 'видалення гілки',
       do: () => removeRaw(id),
-      undo: () => restoreRows(rows),
+      undo: async () => {
+        await restoreRows(rows);
+        for (const l of lost) await createLinkRaw(l);
+      },
       focusId: () => id,
+    });
+  }
+
+  // ---- зв'язки між вузлами ----
+  // Команди звертаються до зв'язку за парою вузлів, а не за id: після скасування
+  // видалення сервер видає новий id, а пара лишається тією самою.
+  const linksBase = () => `/maps/${map.value.id}/links`;
+  const linkOf = (fromId, toId) => links.value.find((l) => l.fromId === fromId && l.toId === toId);
+
+  async function createLinkRaw({ fromId, toId, label = null }) {
+    const { link } = await http.post(linksBase(), { fromId, toId, label });
+    links.value.push(link);
+    return link;
+  }
+
+  async function deleteLinkRaw(fromId, toId) {
+    const link = linkOf(fromId, toId);
+    if (!link) return;
+    await http.delete(`${linksBase()}/${link.id}`);
+    links.value = links.value.filter((l) => l.id !== link.id);
+    if (selectedLinkId.value === link.id) selectedLinkId.value = null;
+  }
+
+  async function addLink(fromId, toId, label = null) {
+    let created = null;
+    await record({
+      label: "додавання зв'язку",
+      do: async () => { created = await createLinkRaw({ fromId, toId, label }); },
+      undo: () => deleteLinkRaw(fromId, toId),
+      focusId: () => null,
+    });
+    selectLink(created.id);
+    return created;
+  }
+
+  async function setLinkLabel(id, label) {
+    const link = links.value.find((l) => l.id === id);
+    const after = label && label.trim() ? label.trim() : null;
+    if (!link || (link.label ?? null) === after) return;
+    const { fromId, toId, label: before } = link;
+    const apply = async (value) => {
+      const target = linkOf(fromId, toId);
+      if (!target) return;
+      const { link: saved } = await http.patch(`${linksBase()}/${target.id}`, { label: value });
+      target.label = saved.label;
+    };
+    await record({
+      label: "підпис зв'язку",
+      do: () => apply(after),
+      undo: () => apply(before),
+      focusId: () => null,
+    });
+  }
+
+  async function removeLink(id) {
+    const link = links.value.find((l) => l.id === id);
+    if (!link) return;
+    const { fromId, toId, label } = link;
+    await record({
+      label: "видалення зв'язку",
+      do: () => deleteLinkRaw(fromId, toId),
+      undo: () => createLinkRaw({ fromId, toId, label }),
+      focusId: () => null,
     });
   }
 
@@ -440,7 +524,7 @@ export const useMapEditorStore = defineStore('mapEditor', () => {
   }
 
   return {
-    map, nodes, boundaries, error, selectedId, root, layout, theme, selected,
+    map, nodes, boundaries, links, selectedLinkId, selectedLink, selectLink, addLink, setLinkLabel, removeLink, error, selectedId, root, layout, theme, selected,
     load, select, addChild, addChildAndSelect, addSiblingAndSelect, setLayout, setTheme, renameMap, patch, setNote, rename, toggleCollapsed, move, moveAndReveal, duplicate, copyBranch, cutBranch, pasteBranch, clipboardInfo, remove, undo, redo, historyState, uploadAttachments, removeAttachment, selectedAttachments, attachmentCounts, addBoundaryForBranch, renameBoundary, removeBoundary,
   };
 });

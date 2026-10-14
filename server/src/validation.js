@@ -110,3 +110,16 @@ export const createBoundarySchema = z.object({
 export const updateBoundarySchema = z
   .object({ label: boundaryLabel.optional(), nodeIds: boundaryNodeIds.optional() })
   .refine((v) => Object.keys(v).length > 0, 'Немає полів для оновлення');
+
+// ---- Зв'язки між вузлами ----
+
+export const MAX_LINK_LABEL = 120;
+const linkLabel = z.string().trim().max(MAX_LINK_LABEL, `Підпис зв'язку занадто довгий (максимум ${MAX_LINK_LABEL} символів)`);
+
+export const createLinkSchema = z.object({
+  fromId: z.string().min(1).max(64),
+  toId: z.string().min(1).max(64),
+  label: linkLabel.nullable().optional(),
+});
+
+export const updateLinkSchema = z.object({ label: linkLabel.nullable() });

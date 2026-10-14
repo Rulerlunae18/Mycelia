@@ -4,12 +4,13 @@ import { buildTemplateRegistry } from '../../src/domain/templates.js';
 import { TemplateService } from '../../src/services/TemplateService.js';
 import { AttachmentService } from '../../src/services/AttachmentService.js';
 import { BoundaryService } from '../../src/services/BoundaryService.js';
+import { LinkService } from '../../src/services/LinkService.js';
 import { MapService } from '../../src/services/MapService.js';
 import { NodeService } from '../../src/services/NodeService.js';
-import { FakeAttachmentRepository, FakeBoundaryRepository, FakeStorage, FakeMapRepository, FakeNodeRepository, FakeUserRepository } from './fakeRepositories.js';
+import { FakeAttachmentRepository, FakeBoundaryRepository, FakeLinkRepository, FakeStorage, FakeMapRepository, FakeNodeRepository, FakeUserRepository } from './fakeRepositories.js';
 
 // storage можно подсмотреть в тестах: app.locals.storage
-export function makeTestApp() {
+export function makeTestApp({ maxLinks } = {}) {
   const authService = new AuthService({
     userRepository: new FakeUserRepository(),
     jwtSecret: 'test-secret-test-secret-test-secret',
@@ -27,9 +28,10 @@ export function makeTestApp() {
     nodeRepository,
     boundaryRepository: new FakeBoundaryRepository(mapRepository),
   });
+  const linkService = new LinkService({ mapRepository, nodeRepository, linkRepository: new FakeLinkRepository(mapRepository), maxLinks });
   const nodeService = new NodeService({ mapRepository, nodeRepository, boundaryService, attachmentService });
   const templateService = new TemplateService({ mapRepository, nodeRepository, registry: buildTemplateRegistry() });
-  const app = createApp({ authService, mapService, nodeService, boundaryService, attachmentService, templateService });
+  const app = createApp({ authService, mapService, nodeService, boundaryService, linkService, attachmentService, templateService });
   app.locals.storage = storage;
   return app;
 }

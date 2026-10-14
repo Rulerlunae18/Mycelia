@@ -33,3 +33,10 @@ export class BoundaryStyle {
     Object.assign(this, { stroke, fill, labelColor });
   }
 }
+
+// Зв'язок між вузлами: колір лінії і стрілки, товщина, колір підпису та його підкладки
+export class LinkStyle {
+  constructor({ stroke, width, labelColor, labelBg, selectedStroke }) {
+    Object.assign(this, { stroke, width, labelColor, labelBg, selectedStroke });
+  }
+}

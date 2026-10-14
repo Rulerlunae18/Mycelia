@@ -30,6 +30,7 @@ export class MapRepository {
       include: {
         nodes: { orderBy: { order: 'asc' }, include: { attachments: true } },
         boundaries: true,
+        links: true,
       },
     });
   }

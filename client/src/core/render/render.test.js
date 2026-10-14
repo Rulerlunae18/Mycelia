@@ -12,6 +12,7 @@ class RecordingBackend {
   begin(bounds) { this.calls.push(['begin', bounds]); }
   drawBoundary(b) { this.calls.push(['boundary', b]); }
   drawEdge(e) { this.calls.push(['edge', e]); }
+  drawLink(l) { this.calls.push(['link', l]); }
   drawNode(n) { this.calls.push(['node', n]); }
   end() { this.calls.push(['end']); return 'done'; }
 }
@@ -187,5 +188,33 @@ describe('SvgSceneBackend', () => {
     expect(scene.nodes.find((n) => n.id === 'a').hasNote).toBe(true);
     expect(scene.nodes.find((n) => n.id === 'b').hasNote).toBe(false);
     expect(scene.nodes.find((n) => n.id === 'r').hasNote).toBe(false);
+  });
+
+  it("зв'язки малюються між гілками і вузлами; зв'язок зі згорнутою гілкою пропускається", () => {
+    const { root, a } = sample();
+    const links = [{ id: 'l1', fromId: 'a1', toId: 'b', label: 'впливає на' }, { id: 'l2', fromId: 'b', toId: 'a1', label: null }];
+    const backend = new RecordingBackend();
+    new MapRenderer(backend).render(root, { links, selectedLinkId: 'l2' });
+    const kinds = backend.calls.map((c) => c[0]);
+    expect(kinds.filter((k) => k === 'link')).toHaveLength(2);
+    expect(kinds.lastIndexOf('edge')).toBeLessThan(kinds.indexOf('link'));
+    expect(kinds.lastIndexOf('link')).toBeLessThan(kinds.indexOf('node'));
+    const [first, second] = backend.calls.filter((c) => c[0] === 'link').map((c) => c[1]);
+    expect(first).toMatchObject({ id: 'l1', fromId: 'a1', toId: 'b', label: 'впливає на', selected: false });
+    expect(second).toMatchObject({ label: '', selected: true });
+    expect(first.d).toMatch(/^M[-\d. ]+Q[-\d. ]+$/);
+    expect(first.arrow).toMatch(/^M[-\d. ]+L[-\d. ]+L[-\d. ]+Z$/);
+
+    a.collapsed = true; // a1 прихований: зв'язок з ним не малюється
+    const folded = new RecordingBackend();
+    new MapRenderer(folded).render(root, { links });
+    expect(folded.calls.filter((c) => c[0] === 'link')).toHaveLength(0);
+  });
+
+  it('SvgSceneBackend віддає зв\'язки в сцені', () => {
+    const { root } = sample();
+    const scene = new MapRenderer(new SvgSceneBackend()).render(root, { links: [{ id: 'l', fromId: 'a', toId: 'b' }] });
+    expect(scene.links).toHaveLength(1);
+    expect(scene.links[0].look.stroke).toBeTruthy();
   });
 });

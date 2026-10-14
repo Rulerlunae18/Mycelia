@@ -3,7 +3,7 @@
 // інтерактивність (вибір, подвійний клік) лишається звичайними обробниками подій.
 export class SvgSceneBackend {
   begin(bounds, canvas) {
-    this.scene = { bounds, canvas, boundaries: [], edges: [], nodes: [] };
+    this.scene = { bounds, canvas, boundaries: [], edges: [], links: [], nodes: [] };
   }
 
   drawBoundary(boundary) {
@@ -12,6 +12,10 @@ export class SvgSceneBackend {
 
   drawEdge({ fromId, toId, path, depth, look }) {
     this.scene.edges.push({ id: toId, fromId, d: path, depth, look });
+  }
+
+  drawLink(link) {
+    this.scene.links.push({ ...link });
   }
 
   drawNode(node) {

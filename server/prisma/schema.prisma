@@ -34,6 +34,7 @@ model MindMap {
   owner      User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   nodes      Node[]
   boundaries Boundary[]
+  links      Link[]
 
   @@index([ownerId])
   @@map("maps")
@@ -56,6 +57,8 @@ model Node {
   parent      Node?        @relation("NodeTree", fields: [parentId], references: [id], onDelete: Cascade)
   children    Node[]       @relation("NodeTree")
   attachments Attachment[]
+  linksFrom   Link[]       @relation("LinkFrom")
+  linksTo     Link[]       @relation("LinkTo")
 
   @@index([mapId])
   @@index([parentId])
@@ -86,6 +89,23 @@ model Boundary {
 
   map MindMap @relation(fields: [mapId], references: [id], onDelete: Cascade)
 
+  @@index([mapId])
+}
+
+// Зв'язок між двома вузлами однієї карти (стрілка «від → до» поза деревом).
+// Зникає разом з будь-яким із вузлів. Пара (fromId, toId) унікальна.
+model Link {
+  id     String  @id @default(uuid())
+  mapId  String
+  fromId String
+  toId   String
+  label  String?
+
+  map  MindMap @relation(fields: [mapId], references: [id], onDelete: Cascade)
+  from Node    @relation("LinkFrom", fields: [fromId], references: [id], onDelete: Cascade)
+  to   Node    @relation("LinkTo", fields: [toId], references: [id], onDelete: Cascade)
+
+  @@unique([fromId, toId])
   @@index([mapId])
 }
 

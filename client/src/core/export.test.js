@@ -96,4 +96,19 @@ describe('ім\'я файла', () => {
     expect(fileName('  ', 'svg')).toBe('Mycelia.svg');
     expect(fileName('я'.repeat(200), 'svg').length).toBe(84);
   });
+
+  it("зв'язки потрапляють у SVG і в Markdown, а підписи екрануються", () => {
+    const { root } = sample();
+    const links = [{ id: 'l', fromId: 'a1', toId: 'b', label: 'A & <B>' }, { id: 'm', fromId: 'a', toId: 'zzz', label: 'зникле' }];
+    const svg = renderSvg(root, { layout: 'tree', theme: 'forest', links });
+    expect(svg).toContain('stroke-dasharray="7 5"');
+    expect(svg).toContain('A &amp; &lt;B&gt;');
+    expect(svg).not.toContain('A & <B>');
+    expect(renderSvg(root, { layout: 'tree', theme: 'forest' })).not.toContain('stroke-dasharray="7 5"');
+    const md = toMarkdown(root, { links });
+    expect(md).toContain("## Зв'язки");
+    expect(md).toContain('- A1 → B: A & <B>');
+    expect(md).not.toContain('зникле'); // кінець зв'язку, якого немає в карті, пропускаємо
+    expect(toMarkdown(root)).not.toContain("Зв'язки");
+  });
 });

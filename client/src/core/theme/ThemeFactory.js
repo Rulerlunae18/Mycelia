@@ -22,6 +22,9 @@ export class ThemeFactory {
   /** index: порядковий номер області, щоб сусідні мали різні кольори; @returns {import('./products').BoundaryStyle} */
   createBoundaryStyle(/* index */) { return abstract('createBoundaryStyle'); }
 
+  /** selected: виділений зв'язок; @returns {import('./products').LinkStyle} */
+  createLinkStyle(/* { selected } */) { return abstract('createLinkStyle'); }
+
   /** @returns {import('./products').CanvasStyle} */
   createCanvasStyle() { return abstract('createCanvasStyle'); }
 }

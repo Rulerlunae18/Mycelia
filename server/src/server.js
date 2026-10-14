@@ -3,6 +3,7 @@ import { config } from './config.js';
 import { prisma } from './db.js';
 import { AttachmentRepository } from './repositories/AttachmentRepository.js';
 import { BoundaryRepository } from './repositories/BoundaryRepository.js';
+import { LinkRepository } from './repositories/LinkRepository.js';
 import { MapRepository } from './repositories/MapRepository.js';
 import { NodeRepository } from './repositories/NodeRepository.js';
 import { UserRepository } from './repositories/UserRepository.js';
@@ -10,6 +11,7 @@ import { buildTemplateRegistry } from './domain/templates.js';
 import { AttachmentService } from './services/AttachmentService.js';
 import { AuthService } from './services/AuthService.js';
 import { BoundaryService } from './services/BoundaryService.js';
+import { LinkService } from './services/LinkService.js';
 import { MapService } from './services/MapService.js';
 import { NodeService } from './services/NodeService.js';
 import { TemplateService } from './services/TemplateService.js';
@@ -37,9 +39,10 @@ const boundaryService = new BoundaryService({
   nodeRepository,
   boundaryRepository: new BoundaryRepository(prisma),
 });
+const linkService = new LinkService({ mapRepository, nodeRepository, linkRepository: new LinkRepository(prisma) });
 const nodeService = new NodeService({ mapRepository, nodeRepository, boundaryService, attachmentService });
 
-const app = createApp({ authService, mapService, nodeService, boundaryService, attachmentService, templateService });
+const app = createApp({ authService, mapService, nodeService, boundaryService, linkService, attachmentService, templateService });
 const server = app.listen(config.port, () => {
   console.log(`Mycelia API: http://localhost:${config.port}`);
 });
