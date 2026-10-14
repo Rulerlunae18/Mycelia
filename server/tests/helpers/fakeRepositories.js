@@ -40,6 +40,7 @@ export class FakeMapRepository {
       updatedAt: new Date(),
       nodes: [newNode({ mapId: id, parentId: null, text: title, order: 0 })],
       boundaries: [],
+      links: [],
     };
     this.maps.push(map);
     return map;
@@ -143,6 +144,8 @@ export class FakeNodeRepository {
   async deleteLeafFirst(ids) {
     for (const map of this.mapRepository.maps) {
       map.nodes = map.nodes.filter((n) => !ids.includes(n.id));
+      // як каскад у БД: зв'язки зникають разом із вузлами
+      map.links = map.links.filter((l) => !ids.includes(l.fromId) && !ids.includes(l.toId));
     }
   }
 }
@@ -179,6 +182,41 @@ export class FakeBoundaryRepository {
 
   async delete(id) {
     for (const map of this.mapRepository.maps) map.boundaries = map.boundaries.filter((b) => b.id !== id);
+  }
+}
+
+export class FakeLinkRepository {
+  constructor(mapRepository) {
+    this.mapRepository = mapRepository;
+  }
+
+  #all() {
+    return this.mapRepository.maps.flatMap((m) => m.links);
+  }
+
+  async findByMap(mapId) {
+    return this.mapRepository.maps.find((m) => m.id === mapId).links.map((l) => ({ ...l }));
+  }
+
+  async findById(id) {
+    const l = this.#all().find((x) => x.id === id);
+    return l ? { ...l } : null;
+  }
+
+  async create({ mapId, fromId, toId, label }) {
+    const link = { id: randomUUID(), mapId, fromId, toId, label };
+    this.mapRepository.maps.find((m) => m.id === mapId).links.push(link);
+    return { ...link };
+  }
+
+  async update(id, data) {
+    const l = this.#all().find((x) => x.id === id);
+    Object.assign(l, data);
+    return { ...l };
+  }
+
+  async delete(id) {
+    for (const map of this.mapRepository.maps) map.links = map.links.filter((l) => l.id !== id);
   }
 }
 

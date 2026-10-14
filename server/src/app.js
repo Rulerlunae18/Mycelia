@@ -9,12 +9,13 @@ import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { authRoutes } from './routes/auth.routes.js';
 import { attachmentRoutes } from './routes/attachments.routes.js';
 import { boundaryRoutes } from './routes/boundaries.routes.js';
+import { linkRoutes } from './routes/links.routes.js';
 import { mapRoutes } from './routes/maps.routes.js';
 import { nodeRoutes } from './routes/nodes.routes.js';
 
 // Фабрика застосунку: сервіси приходять ззовні (dependency injection).
 // У server.js вони працюють із Prisma, у тестах із фейковими репозиторіями.
-export function createApp({ authService, mapService, nodeService, boundaryService, attachmentService, templateService }) {
+export function createApp({ authService, mapService, nodeService, boundaryService, linkService, attachmentService, templateService }) {
   const app = express();
 
   // Render стоїть за проксі: потрібно для rate limit і Secure-cookie
@@ -50,6 +51,8 @@ export function createApp({ authService, mapService, nodeService, boundaryServic
   app.use('/api/maps/:mapId/nodes', nodeRoutes({ nodeService, requireAuth }));
 
   app.use('/api/maps/:mapId/boundaries', boundaryRoutes({ boundaryService, requireAuth }));
+
+  app.use('/api/maps/:mapId/links', linkRoutes({ linkService, requireAuth }));
 
   app.use('/api/maps/:mapId', attachmentRoutes({ attachmentService, requireAuth }));
 
