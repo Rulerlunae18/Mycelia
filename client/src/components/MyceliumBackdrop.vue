@@ -5,6 +5,7 @@ import { onBeforeUnmount, onMounted, ref } from 'vue';
 // calm: тихіший фон для робочих екранів (менше імпульсів, ледь помітні нитки)
 const props = defineProps({ calm: { type: Boolean, default: false } });
 import { growNetwork, makeRng, pickRoute, pointAt } from '../core/mycelium';
+import { readPalette } from '../core/palette';
 
 const canvas = ref(null);
 let nodes = [];
@@ -20,9 +21,11 @@ let resizeTimer = 0;
 const rng = makeRng(Date.now() % 100000);
 const reduced = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-const THREAD = '126, 224, 164';
+// Кольори з палітри (style.css), зчитуються при кожній перебудові полотна
+let colors = readPalette();
 
 function paintStill() {
+  colors = readPalette();
   still = document.createElement('canvas');
   still.width = Math.ceil(width * dpr);
   still.height = Math.ceil(height * dpr);
@@ -38,7 +41,7 @@ function paintStill() {
       g.moveTo(p.x, p.y);
       g.lineTo(n.x, n.y);
     }
-    g.strokeStyle = `rgba(${THREAD}, ${0.2 - gen * 0.033})`;
+    g.strokeStyle = `rgba(${colors.thread}, ${0.2 - gen * 0.033})`;
     g.lineWidth = Math.max(0.6, 1.9 - gen * 0.38);
     g.stroke();
   }
@@ -86,7 +89,7 @@ function draw(dt) {
     for (let i = 1; i <= steps; i++) {
       const at = pointAt(p.path, Math.max(0, p.s - p.tail * (1 - i / steps)));
       const k = (i / steps) ** 2 * p.fade;
-      ctx.strokeStyle = `rgba(190, 247, 214, ${0.75 * k})`;
+      ctx.strokeStyle = `rgba(${colors.trail}, ${0.75 * k})`;
       ctx.lineWidth = 0.8 + 1.8 * k;
       ctx.beginPath();
       ctx.moveTo(prev.x, prev.y);
@@ -96,9 +99,9 @@ function draw(dt) {
     }
     const head = pointAt(p.path, p.s);
     const glow = ctx.createRadialGradient(head.x, head.y, 0, head.x, head.y, 16);
-    glow.addColorStop(0, `rgba(210, 255, 230, ${0.95 * p.fade})`);
-    glow.addColorStop(0.3, `rgba(${THREAD}, ${0.4 * p.fade})`);
-    glow.addColorStop(1, `rgba(${THREAD}, 0)`);
+    glow.addColorStop(0, `rgba(${colors.spark}, ${0.95 * p.fade})`);
+    glow.addColorStop(0.3, `rgba(${colors.glow}, ${0.4 * p.fade})`);
+    glow.addColorStop(1, `rgba(${colors.glow}, 0)`);
     ctx.fillStyle = glow;
     ctx.beginPath();
     ctx.arc(head.x, head.y, 16, 0, Math.PI * 2);

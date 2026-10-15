@@ -66,7 +66,13 @@ const LIGHT_MARKS = {
   priority: { low: '#64748b', normal: '#2f62d1', high: '#b45309', urgent: '#c81e1e' },
 };
 
-// Три родини: лісова (за замовчуванням), паперова світла, океан
+// Родини: ягоди (за замовчуванням), ліс, папір світла, океан.
+// «Ягоди»: темна листя-палітра з лавандовим світінням; зв'язки теплі, щоб виділялись на холодному тлі.
+export const BerryTheme = new PaletteTheme('berry', 'Ягоди', {
+  canvas: '#161d1a', dot: 'rgba(179, 162, 238, 0.11)', node: '#212d28', nodeBorder: '#3b4e45',
+  text: '#e8f1f0', accent: '#b3a2ee', accentInk: '#15102a', edge: '#6b8c88', link: '#f0b87a', ...DARK_MARKS,
+});
+
 export const ForestTheme = new PaletteTheme('forest', 'Ліс', {
   canvas: '#16221c', dot: 'rgba(126, 224, 164, 0.12)', node: '#1d2d25', nodeBorder: '#2f4a3b',
   text: '#e6efe9', accent: '#7ee0a4', accentInk: '#0a1f14', edge: '#7ee0a4', link: '#f4c95d', ...DARK_MARKS,

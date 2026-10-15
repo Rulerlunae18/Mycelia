@@ -357,27 +357,27 @@ function removeSelected(id = store.selectedId) {
 .head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 20px; margin-bottom: 18px; }
 .title {
   margin: 0; font-family: var(--serif); font-weight: 600; font-size: clamp(2rem, 4.5vw, 2.9rem); line-height: 1.05;
-  color: var(--ink); text-shadow: 0 0 28px rgba(126, 224, 164, 0.22); overflow-wrap: anywhere;
+  color: var(--ink); text-shadow: 0 0 28px rgb(var(--glow-rgb) / 0.22); overflow-wrap: anywhere;
 }
 .count { margin: 0; font-family: var(--serif); font-style: italic; font-weight: 500; font-size: 1.3rem; color: var(--soft); }
 
 /* ── Панель карти і панель вибраного вузла ── */
 .deck, .pick { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; padding: 10px 14px; border-radius: 14px; margin-bottom: 10px; }
-.seg { display: inline-flex; gap: 4px; padding: 3px; background: rgba(8, 16, 12, 0.45); border: 1px solid rgba(126, 224, 164, 0.14); border-radius: 12px; }
+.seg { display: inline-flex; gap: 4px; padding: 3px; background: rgb(var(--deep-rgb) / 0.45); border: 1px solid rgb(var(--glow-rgb) / 0.14); border-radius: 12px; }
 .seg .btn { border-color: transparent; background: transparent; }
-.seg .btn:hover { background: rgba(126, 224, 164, 0.12); }
-.seg .btn.active { background: var(--glow); color: var(--accent-ink); box-shadow: 0 0 14px rgba(126, 224, 164, 0.3); }
+.seg .btn:hover { background: rgb(var(--glow-rgb) / 0.12); }
+.seg .btn.active { background: var(--glow); color: var(--accent-ink); box-shadow: 0 0 14px rgb(var(--glow-rgb) / 0.3); }
 .theme { display: inline-flex; align-items: center; gap: 8px; font-size: 0.9rem; }
 .exports { margin-left: auto; }
 
 .pick { min-height: 54px; }
-.pick.idle { background: rgba(20, 32, 26, 0.45); border-style: dashed; }
+.pick.idle { background: rgb(var(--panel-rgb) / 0.45); border-style: dashed; }
 .hintline { font-family: var(--serif); font-style: italic; font-size: 1.15rem; color: var(--muted); }
 .chip {
   max-width: 26ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 4px 14px;
   font-family: var(--serif); font-size: 1.2rem; font-weight: 600; color: var(--ink);
-  background: radial-gradient(circle at 20% 50%, rgba(126, 224, 164, 0.2), rgba(8, 16, 12, 0.6));
-  border: 1px solid rgba(126, 224, 164, 0.5); border-radius: 999px; box-shadow: 0 0 14px rgba(126, 224, 164, 0.15);
+  background: radial-gradient(circle at 20% 50%, rgb(var(--glow-rgb) / 0.2), rgb(var(--deep-rgb) / 0.6));
+  border: 1px solid rgb(var(--glow-rgb) / 0.5); border-radius: 999px; box-shadow: 0 0 14px rgb(var(--glow-rgb) / 0.15);
 }
 .acts { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
 
@@ -396,7 +396,7 @@ function removeSelected(id = store.selectedId) {
 /* «брунька»: закрита порожня, відкрита світиться, як активна вкладка */
 .outline summary::before {
   content: ''; flex: none; width: 9px; height: 9px; margin-right: 12px; align-self: center; border-radius: 50%;
-  border: 1.5px solid rgba(126, 224, 164, 0.6); background: #0f1713; transition: background 0.25s, box-shadow 0.25s;
+  border: 1.5px solid rgb(var(--glow-rgb) / 0.6); background: var(--bg); transition: background 0.25s, box-shadow 0.25s;
 }
 .outline[open] > summary::before { background: var(--glow); border-color: var(--glow); box-shadow: 0 0 10px var(--glow); }
 .areas { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 8px; }
@@ -405,10 +405,10 @@ function removeSelected(id = store.selectedId) {
 .link-label { flex: 1; min-width: 200px; max-width: 360px; }
 .link-ends {
   max-width: 34ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 4px 12px; cursor: pointer;
-  font-family: var(--serif); font-size: 1.05rem; color: var(--ink); background: rgba(8, 16, 12, 0.5);
-  border: 1px solid rgba(126, 224, 164, 0.3); border-radius: 999px;
+  font-family: var(--serif); font-size: 1.05rem; color: var(--ink); background: rgb(var(--deep-rgb) / 0.5);
+  border: 1px solid rgb(var(--glow-rgb) / 0.3); border-radius: 999px;
 }
-.link-ends:hover, .areas li.current .link-ends { border-color: var(--glow); box-shadow: 0 0 10px rgba(126, 224, 164, 0.25); }
+.link-ends:hover, .areas li.current .link-ends { border-color: var(--glow); box-shadow: 0 0 10px rgb(var(--glow-rgb) / 0.25); }
 .tree { margin: 12px 0 0; padding: 0; }
 .note { margin: 16px 0 0; font-size: 0.875rem; }
 </style>

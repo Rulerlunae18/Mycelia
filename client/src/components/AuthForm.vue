@@ -74,8 +74,8 @@ async function submit() {
 }
 .wordmark {
   margin: 0; font-family: Kaushan Script, cursive; font-weight: 600; font-size: clamp(3.4rem, 9vw, 5.6rem);
-  line-height: 1; letter-spacing: -0.02em; color: #d9f6e4;
-  text-shadow: 0 0 32px rgba(126, 224, 164, 0.35), 0 0 4px rgba(190, 247, 214, 0.4);
+  line-height: 1; letter-spacing: -0.02em; color: var(--spark);
+  text-shadow: 0 0 32px rgb(var(--glow-rgb) / 0.35), 0 0 4px rgb(var(--trail-rgb) / 0.4);
   animation: fadeInUp 1s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 .field label {
@@ -85,8 +85,8 @@ async function submit() {
 }
 .field input {
   width: 100%;
-  background: rgba(10, 16, 13, 0.4);
-  border: 1px solid rgba(126, 224, 164, 0.2);
+  background: rgb(var(--deep-rgb) / 0.4);
+  border: 1px solid rgb(var(--glow-rgb) / 0.2);
   color: #fff;
   padding: 10px 12px;
   border-radius: 8px;
@@ -94,21 +94,21 @@ async function submit() {
   box-sizing: border-box;
 }
 .field input:focus {
-  border-color: #7ee0a4;
+  border-color: var(--glow);
   outline: none;
-  box-shadow: 0 0 0 2px rgba(126, 224, 164, 0.2);
+  box-shadow: 0 0 0 2px rgb(var(--glow-rgb) / 0.2);
 }
 .control { position: relative; }
 .control input { padding-right: 52px; }
 .reveal {
   position: absolute; top: 50%; right: 7px; transform: translateY(-50%);
   display: grid; place-items: center; width: 34px; height: 34px; padding: 0;
-  color: #b4cfbf; background: none; border: 0; border-radius: 9px; cursor: pointer;
+  color: var(--soft); background: none; border: 0; border-radius: 9px; cursor: pointer;
 }
 .reveal svg { width: 20px; height: 20px; fill: none; stroke: currentColor;
   stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
-.reveal:hover, .reveal[aria-pressed='true'] { color: #7ee0a4; }
-.reveal:focus-visible { outline: 2px solid #7ee0a4; outline-offset: 2px; }
+.reveal:hover, .reveal[aria-pressed='true'] { color: var(--glow); }
+.reveal:focus-visible { outline: 2px solid var(--glow); outline-offset: 2px; }
 .quote {
   margin: 35px 0 35px; max-width: 50ch; text-align: center;
   font-family: Cormorant, Georgia, serif; font-style: italic; font-weight: 500; font-size: clamp(1.2rem, 2.6vw, 1.5rem);
@@ -118,15 +118,15 @@ async function submit() {
 }
 .form {
   width: 100%; max-width: 420px;
-  background: rgba(22, 34, 28, 0.78); backdrop-filter: blur(10px);
-  box-shadow: 0 0 0 1px rgba(126, 224, 164, 0.25), 0 24px 60px rgba(0, 0, 0, 0.45);
+  background: rgb(var(--panel-rgb) / 0.78); backdrop-filter: blur(10px);
+  box-shadow: 0 0 0 1px rgb(var(--glow-rgb) / 0.25), 0 24px 60px rgba(0, 0, 0, 0.45);
   animation: fadeInUp 1s cubic-bezier(0.2, 0.8, 0.2, 1) both;
   animation-delay: 0.4s;
 }
 .form h1 { font-size: 1.35rem; }
 .alt { margin: 16px 0 0; font-size: 0.9rem; }
 .alt :deep(a) {
-  color: #7ee0a4;
+  color: var(--glow);
   text-decoration: none;
   transition: color 0.2s;
 }

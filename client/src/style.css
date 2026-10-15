@@ -1,30 +1,55 @@
-:root {
-  --bg: #0f1713;
-  --surface: #16221c;
-  --surface-2: #1d2d25;
-  --border: #2a4034;
-  --text: #e6efe9;
-  --muted: #8fa89a;
-  --accent: #7ee0a4;
-  --accent-ink: #0a1f14;
+:root,
+:root[data-palette='berry'] {
+  /* ══════════ ПАЛІТРА ══════════
+     Усі кольори інтерфейсу беруться звідси. Щоб підкрутити, міняй лише цей блок.
+     Значення з -rgb це три числа через пробіл (R G B): з ними вмикаються прозорості. */
+  --bg: #121916;                 /* фон сторінки */
+  --bg-rgb: 18 25 22;            /* він же для напівпрозорих градієнтів */
+  --halo: #2a2542;               /* м'яке світіння зверху праворуч */
+  --surface: #1a2420;            /* випадні списки, підкладки */
+  --surface-2: #232f2a;
+  --border: #34463d;
+  --deep-rgb: 12 12 20;          /* найтемніше: поля вводу, підкладки */
+  --panel-rgb: 25 29 36;         /* скляні картки */
+
+  --ink: #eaf2f1;                /* заголовки і текст на скляних картках */
+  --text: #e3ecea;
+  --soft: #a8c0c0;               /* другорядний текст, кнопки */
+  --muted: #8199a0;
+
+  --glow: #b3a2ee;               /* головний акцент: активне, посилання, світіння */
+  --glow-rgb: 179 162 238;
+  --glow-hi: #cbbff7;            /* акцент при наведенні */
+  --accent: var(--glow);
+  --accent-ink: #15102a;         /* текст на заливці акценту */
+  --spark: #ece7ff;              /* найяскравіше: голова імпульсу, логотип */
+  --spark-rgb: 236 231 255;
+  --trail-rgb: 196 184 245;      /* хвіст імпульсу */
+  --thread-rgb: 107 140 136;     /* нитки грибниці на фоні */
   --danger: #ff8a8a;
+
+  --line: rgb(var(--glow-rgb) / 0.22);
+  --glass: rgb(var(--panel-rgb) / 0.78);
   --radius: 12px;
-  /* мова «грибниці»: ті самі кольори, що на екрані входу й у списку карт */
-  --ink: #e4f7ea;
-  --soft: #b4cfbf;
-  --glow: #7ee0a4;
-  --line: rgba(126, 224, 164, 0.22);
-  --glass: rgba(20, 32, 26, 0.78);
   --serif: Cormorant, Georgia, serif;
   font-family: Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
   color-scheme: dark;
+}
+
+/* Попередня «лісова» палітра: document.documentElement.dataset.palette = 'forest' (для порівняння) */
+:root[data-palette='forest'] {
+  --bg: #0f1713; --bg-rgb: 15 23 19; --halo: #1b3a2a; --surface: #16221c; --surface-2: #1d2d25; --border: #2a4034;
+  --deep-rgb: 8 16 12; --panel-rgb: 20 32 26;
+  --ink: #e4f7ea; --text: #e6efe9; --soft: #b4cfbf; --muted: #8fa89a;
+  --glow: #7ee0a4; --glow-rgb: 126 224 164; --glow-hi: #94edb7; --accent-ink: #0a1f14;
+  --spark: #d2ffe6; --spark-rgb: 210 255 230; --trail-rgb: 190 247 214; --thread-rgb: 126 224 164;
 }
 
 * { box-sizing: border-box; }
 
 body {
   margin: 0;
-  background: radial-gradient(1200px 600px at 80% -10%, #1b3a2a 0%, transparent 60%), var(--bg);
+  background: radial-gradient(1200px 600px at 80% -10%, var(--halo) 0%, transparent 60%), var(--bg);
   color: var(--text);
   min-height: 100vh;
 }
@@ -42,7 +67,7 @@ h1, h2 { margin: 0 0 0.75rem; font-weight: 650; letter-spacing: -0.01em; }
   border: 1px solid var(--line);
   border-radius: 16px;
   padding: 20px 22px;
-  box-shadow: 0 0 0 1px rgba(126, 224, 164, 0.04), 0 18px 48px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 0 0 1px rgb(var(--glow-rgb) / 0.04), 0 18px 48px rgba(0, 0, 0, 0.35);
 }
 
 .field { display: grid; gap: 6px; margin-bottom: 14px; }
@@ -53,48 +78,48 @@ input:not([type]), input[type='text'], input[type='email'], input[type='password
   padding: 10px 12px;
   border-radius: 10px;
   border: 1px solid var(--line);
-  background: rgba(8, 16, 12, 0.55);
+  background: rgb(var(--deep-rgb) / 0.55);
   color: var(--ink);
   font: inherit;
   transition: border-color 0.2s, background 0.2s;
 }
-input:focus { outline: none; border-color: rgba(126, 224, 164, 0.6); background: rgba(8, 16, 12, 0.8); box-shadow: 0 0 0 3px rgba(126, 224, 164, 0.12); }
+input:focus { outline: none; border-color: rgb(var(--glow-rgb) / 0.6); background: rgb(var(--deep-rgb) / 0.8); box-shadow: 0 0 0 3px rgb(var(--glow-rgb) / 0.12); }
 :focus-visible { outline: 2px solid var(--glow); outline-offset: 2px; }
 
 select {
   font: inherit; font-size: 0.9rem; padding: 7px 34px 7px 12px; color: var(--ink); cursor: pointer;
-  background-color: rgba(8, 16, 12, 0.55); border: 1px solid var(--line); border-radius: 10px;
+  background-color: rgb(var(--deep-rgb) / 0.55); border: 1px solid var(--line); border-radius: 10px;
   appearance: none; max-width: 100%;
-  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%237ee0a4' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
-  background-repeat: no-repeat; background-position: right 10px center; background-size: 14px;
+  background-image: linear-gradient(45deg, transparent 50%, var(--glow) 50%), linear-gradient(135deg, var(--glow) 50%, transparent 50%);
+  background-repeat: no-repeat; background-position: calc(100% - 17px) 52%, calc(100% - 12px) 52%; background-size: 5px 5px;
   transition: border-color 0.2s, background-color 0.2s;
 }
-select:hover { border-color: rgba(126, 224, 164, 0.5); }
-select:focus { outline: none; border-color: rgba(126, 224, 164, 0.6); box-shadow: 0 0 0 3px rgba(126, 224, 164, 0.12); }
-select option { background-color: #16221c; color: #fff; }
+select:hover { border-color: rgb(var(--glow-rgb) / 0.5); }
+select:focus { outline: none; border-color: rgb(var(--glow-rgb) / 0.6); box-shadow: 0 0 0 3px rgb(var(--glow-rgb) / 0.12); }
+select option { background-color: var(--surface); color: #fff; }
 
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   padding: 10px 16px;
   border-radius: 10px;
   border: 1px solid var(--line);
-  background: rgba(126, 224, 164, 0.07);
+  background: rgb(var(--glow-rgb) / 0.07);
   color: var(--soft);
   font: inherit; font-weight: 600;
   cursor: pointer;
   transition: color 0.2s, background 0.2s, border-color 0.2s, box-shadow 0.2s;
 }
-.btn:hover { color: var(--ink); border-color: rgba(126, 224, 164, 0.55); background: rgba(126, 224, 164, 0.14); }
+.btn:hover { color: var(--ink); border-color: rgb(var(--glow-rgb) / 0.55); background: rgb(var(--glow-rgb) / 0.14); }
 .btn:disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
 .btn-primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
-.btn-primary:hover { color: var(--accent-ink); background: #94edb7; border-color: #94edb7; box-shadow: 0 0 18px rgba(126, 224, 164, 0.35); }
+.btn-primary:hover { color: var(--accent-ink); background: var(--glow-hi); border-color: var(--glow-hi); box-shadow: 0 0 18px rgb(var(--glow-rgb) / 0.35); }
 .btn-danger { color: #d8aaa2; }
 .btn-danger:hover { color: #ff9f90; background: rgba(255, 110, 90, 0.12); border-color: rgba(255, 138, 120, 0.5); }
 .btn-small { padding: 6px 11px; font-size: 0.875rem; }
 
 kbd {
   font: inherit; font-size: 0.8em; padding: 1px 7px; color: var(--soft);
-  border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 6px; background: rgba(8, 16, 12, 0.5);
+  border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 6px; background: rgb(var(--deep-rgb) / 0.5);
 }
 
 .error { color: var(--danger); font-size: 0.9rem; margin: 0 0 12px; }
