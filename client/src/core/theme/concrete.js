@@ -66,7 +66,13 @@ const LIGHT_MARKS = {
   priority: { low: '#64748b', normal: '#2f62d1', high: '#b45309', urgent: '#c81e1e' },
 };
 
-// Родини: ягоди (за замовчуванням), ліс, папір світла, океан.
+// «Ейва»: нічна Пандора. Бірюзове світіння вузлів і неоново-рожеві зв'язки, як флора, що світиться в темряві.
+export const EywaTheme = new PaletteTheme('eywa', 'Ейва', {
+  canvas: '#060d1a', dot: 'rgba(61, 245, 224, 0.13)', node: '#0c1b30', nodeBorder: '#1f4d63',
+  text: '#e3f9fc', accent: '#3df5e0', accentInk: '#021a1c', edge: '#2aa8b5', link: '#ff6bd6', ...DARK_MARKS,
+});
+
+// Родини: ейва (за замовчуванням), ягоди, ліс, папір світла, океан.
 // «Ягоди»: темна листя-палітра з лавандовим світінням; зв'язки теплі, щоб виділялись на холодному тлі.
 export const BerryTheme = new PaletteTheme('berry', 'Ягоди', {
   canvas: '#161d1a', dot: 'rgba(179, 162, 238, 0.11)', node: '#212d28', nodeBorder: '#3b4e45',

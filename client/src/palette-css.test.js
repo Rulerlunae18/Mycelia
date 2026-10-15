@@ -19,8 +19,9 @@ const block = (selector) => {
 const defined = (text) => new Set([...text.matchAll(/(--[\w-]+)\s*:/g)].map((m) => m[1]));
 
 describe('палітра інтерфейсу', () => {
-  const berry = defined(block(':root,'));
-  const forest = defined(block(":root[data-palette='forest']"));
+  const main = defined(block(':root,'));
+  const berry = main;
+  const others = { berry: defined(block(":root[data-palette='berry']")), forest: defined(block(":root[data-palette='forest']")) };
 
   it('кожна змінна кольору, яку хтось використовує, визначена в палітрі', () => {
     const used = new Set();
@@ -32,8 +33,10 @@ describe('палітра інтерфейсу', () => {
     expect(missing).toEqual([]);
   });
 
-  it('запасна палітра «forest» перевизначає всі кольорові змінні основної', () => {
-    const colorVars = [...berry].filter((v) => !['--radius', '--serif', '--accent', '--line', '--glass', '--danger'].includes(v));
-    expect(colorVars.filter((v) => !forest.has(v))).toEqual([]);
+  it('запасні палітри перевизначають усі кольорові змінні основної', () => {
+    const colorVars = [...main].filter((v) => !['--radius', '--serif', '--accent', '--line', '--glass', '--danger'].includes(v));
+    for (const [name, vars] of Object.entries(others)) {
+      expect(colorVars.filter((v) => !vars.has(v)), name).toEqual([]);
+    }
   });
 });

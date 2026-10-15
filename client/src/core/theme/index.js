@@ -1,7 +1,8 @@
-import { BerryTheme, ForestTheme, OceanTheme, PaperTheme } from './concrete.js';
+import { BerryTheme, EywaTheme, ForestTheme, OceanTheme, PaperTheme } from './concrete.js';
 
 // Реєстр: додати тему означає написати палітру і один рядок тут
 export const THEMES = {
+  [EywaTheme.name]: EywaTheme,
   [BerryTheme.name]: BerryTheme,
   [ForestTheme.name]: ForestTheme,
   [PaperTheme.name]: PaperTheme,
@@ -9,7 +10,7 @@ export const THEMES = {
 };
 
 export const THEME_NAMES = Object.keys(THEMES); // збігається з THEMES на сервері
-export const DEFAULT_THEME = 'berry';
+export const DEFAULT_THEME = 'eywa';
 
 // Невідома назва (наприклад, «default» зі старих карт) дає тему за замовчуванням
 export const getTheme = (name) => THEMES[name] ?? THEMES[DEFAULT_THEME];
