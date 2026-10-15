@@ -1,6 +1,6 @@
 // Кольори для canvas-фону беремо з тих самих CSS-змінних, що й увесь інтерфейс (блок «ПАЛІТРА» у style.css),
 // тож палітру змінюють в одному місці. Змінні лежать як «R G B», canvas хоче «R, G, B».
-const FALLBACK = { thread: '107, 140, 136', glow: '179, 162, 238', trail: '196, 184, 245', spark: '236, 231, 255' };
+const FALLBACK = { thread: '40, 170, 200', glow: '61, 245, 224', trail: '150, 190, 255', spark: '232, 255, 253' };
 const VARS = { thread: '--thread-rgb', glow: '--glow-rgb', trail: '--trail-rgb', spark: '--spark-rgb' };
 
 export const toCommaRgb = (value) => String(value ?? '').trim().split(/[\s,]+/).filter(Boolean).join(', ');

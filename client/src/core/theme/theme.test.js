@@ -5,7 +5,7 @@ import { DEFAULT_THEME, getTheme, THEME_NAMES, THEMES, ThemeFactory } from './in
 
 describe('Abstract Factory: теми', () => {
   it('усі теми є фабриками й створюють ту саму родину продуктів', () => {
-    expect(THEME_NAMES).toEqual(['berry', 'forest', 'paper', 'ocean']);
+    expect(THEME_NAMES).toEqual(['eywa', 'berry', 'forest', 'paper', 'ocean']);
     for (const t of Object.values(THEMES)) {
       expect(t).toBeInstanceOf(ThemeFactory);
       expect(Object.keys(t.createNodeStyle())).toEqual(['fill', 'stroke', 'strokeWidth', 'textColor', 'fontSize', 'fontWeight']);

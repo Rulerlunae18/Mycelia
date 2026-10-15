@@ -254,7 +254,7 @@ describe('mapEditor store', () => {
 
   it('карта зі старою темою «default» показується з темою за замовчуванням', async () => {
     store.map.theme = 'default';
-    expect(store.theme).toBe('berry');
+    expect(store.theme).toBe('eywa');
     store.map.theme = 'ocean';
     expect(store.theme).toBe('ocean');
   });
