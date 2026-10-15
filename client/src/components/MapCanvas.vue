@@ -12,7 +12,7 @@ const props = defineProps({
   root: { type: Object, required: true },
   layout: { type: String, default: 'radial' },
   selectedId: { type: String, default: null },
-  theme: { type: String, default: 'berry' },
+  theme: { type: String, default: 'eywa' },
   boundaries: { type: Array, default: () => [] },
   attachmentCounts: { type: Object, default: () => ({}) },
   links: { type: Array, default: () => [] },
