@@ -1,32 +1,29 @@
 :root,
-:root[data-palette='berry'] {
-  /* ══════════ ПАЛІТРА ══════════
-     Усі кольори інтерфейсу беруться звідси. Щоб підкрутити, міняй лише цей блок.
-     Значення з -rgb це три числа через пробіл (R G B): з ними вмикаються прозорості. */
-  --bg: #121916;                 /* фон сторінки */
-  --bg-rgb: 18 25 22;            /* він же для напівпрозорих градієнтів */
-  --halo: #2a2542;               /* м'яке світіння зверху праворуч */
-  --surface: #1a2420;            /* випадні списки, підкладки */
-  --surface-2: #232f2a;
-  --border: #34463d;
-  --deep-rgb: 12 12 20;          /* найтемніше: поля вводу, підкладки */
-  --panel-rgb: 25 29 36;         /* скляні картки */
+:root[data-palette='wisp-bog'] {
+  --bg: #0a0713;
+  --bg-rgb: 10 7 19;
+  --halo: #3a1a5c;
+  --surface: #130d22;
+  --surface-2: #1c1432;
+  --border: #3b2a5e;
+  --deep-rgb: 5 3 12;
+  --panel-rgb: 20 13 38;
 
-  --ink: #eaf2f1;                /* заголовки і текст на скляних картках */
-  --text: #e3ecea;
-  --soft: #a8c0c0;               /* другорядний текст, кнопки */
-  --muted: #8199a0;
+  --ink: #f3eaff;
+  --text: #e0d4f5;
+  --soft: #b8a2e6;
+  --muted: #8574a8;
 
-  --glow: #b3a2ee;               /* головний акцент: активне, посилання, світіння */
-  --glow-rgb: 179 162 238;
-  --glow-hi: #cbbff7;            /* акцент при наведенні */
+  --glow: #b98cff;
+  --glow-rgb: 185 140 255;
+  --glow-hi: #d8bbff;
   --accent: var(--glow);
-  --accent-ink: #15102a;         /* текст на заливці акценту */
-  --spark: #ece7ff;              /* найяскравіше: голова імпульсу, логотип */
-  --spark-rgb: 236 231 255;
-  --trail-rgb: 196 184 245;      /* хвіст імпульсу */
-  --thread-rgb: 107 140 136;     /* нитки грибниці на фоні */
-  --danger: #ff8a8a;
+  --accent-ink: #14062a;
+  --spark: #fbf5ff;
+  --spark-rgb: 251 245 255;
+  --trail-rgb: 110 240 190;
+  --thread-rgb: 130 90 200;
+  --danger: #ff8fb0;
 
   --line: rgb(var(--glow-rgb) / 0.22);
   --glass: rgb(var(--panel-rgb) / 0.78);
@@ -36,7 +33,16 @@
   color-scheme: dark;
 }
 
-/* Попередня «лісова» палітра: document.documentElement.dataset.palette = 'forest' (для порівняння) */
+/* «Ягоди»: лавандове світіння на зеленувато-чорному тлі (document.documentElement.dataset.palette = 'berry') */
+:root[data-palette='berry'] {
+  --bg: #121916; --bg-rgb: 18 25 22; --halo: #2a2542; --surface: #1a2420; --surface-2: #232f2a; --border: #34463d;
+  --deep-rgb: 12 12 20; --panel-rgb: 25 29 36;
+  --ink: #eaf2f1; --text: #e3ecea; --soft: #a8c0c0; --muted: #8199a0;
+  --glow: #b3a2ee; --glow-rgb: 179 162 238; --glow-hi: #cbbff7; --accent-ink: #15102a;
+  --spark: #ece7ff; --spark-rgb: 236 231 255; --trail-rgb: 196 184 245; --thread-rgb: 107 140 136;
+}
+
+/* Лісова: мятне світіння на темно-зеленому (dataset.palette = 'forest') */
 :root[data-palette='forest'] {
   --bg: #0f1713; --bg-rgb: 15 23 19; --halo: #1b3a2a; --surface: #16221c; --surface-2: #1d2d25; --border: #2a4034;
   --deep-rgb: 8 16 12; --panel-rgb: 20 32 26;
