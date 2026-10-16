@@ -1,15 +1,17 @@
 // Модель даних Mycelia (розділ "Модель даних" у документі вимог).
-// Свідомо лише типи, що є і в MySQL, і в PostgreSQL (String, Json, @db.Text):
-// той самий файл працює і на MySQL (розробка), і на PostgreSQL (Supabase). Для переходу
-// достатньо змінити provider і заново згенерувати папку migrations.
+// База: PostgreSQL (Supabase у продакшені, docker-compose локально). Типи свідомо прості
+// (String, Json, @db.Text), тож схема переносима між СУБД.
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "mysql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  // Рядок для застосунку (у Supabase це пул з'єднань, порт 6543, ?pgbouncer=true)
+  url       = env("DATABASE_URL")
+  // Прямий рядок лише для міграцій (Supabase: session pooler, порт 5432). Локально збігається з DATABASE_URL.
+  directUrl = env("DIRECT_URL")
 }
 
 model User {

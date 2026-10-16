@@ -21,5 +21,11 @@ export const config = {
   clientOrigin: process.env.CLIENT_ORIGIN || 'http://localhost:5173',
   // Куди зараз зберігаються вкладені файли (пізніше Supabase Storage)
   uploadDir: process.env.UPLOAD_DIR || path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'uploads'),
+  // Якщо обидва задані, вкладення зберігаються в Supabase Storage замість папки на диску
+  supabaseUrl: process.env.SUPABASE_URL || '',
+  supabaseServiceKey: process.env.SUPABASE_SERVICE_KEY || '',
+  supabaseBucket: process.env.SUPABASE_BUCKET || 'attachments',
+  // Зібраний клієнт (client/dist): у продакшені його віддає сам сервер, тож API і сторінки на одному домені
+  clientDist: process.env.CLIENT_DIST || path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'client', 'dist'),
   cookieSameSite: process.env.COOKIE_SAMESITE || 'lax',
 };

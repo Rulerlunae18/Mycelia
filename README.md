@@ -4,7 +4,7 @@
 Курсова робота з дисципліни «Технології розроблення програмного забезпечення».
 
 **Стек:** Vue 3 + Pinia + Vue Router (клієнт), Node.js + Express (сервер), Prisma ORM,
-MySQL у розробці → PostgreSQL (Supabase) у продакшені, JWT в httpOnly-cookie.
+PostgreSQL (локально Docker, у продакшені Supabase), JWT в httpOnly-cookie.
 
 ## Структура
 
@@ -38,30 +38,32 @@ mycelia/
 ```
 
 Ланцюжок викликів: **route → service → repository → Prisma**. Сервіси нічого не знають
-про Express і Prisma, тому їх можна тестувати без БД, а перехід MySQL → PostgreSQL
-торкається тільки `schema.prisma`.
+про Express і Prisma, тому їх можна тестувати без БД, а база і сховище файлів міняються без змін у сервісах
+(PostgreSQL через `schema.prisma`, файли через Strategy `LocalDiskStorage` / `SupabaseStorage`).
 
 ## Запуск
 
-Потрібно: Node.js 20+, MySQL.
+Потрібно: Node.js 20+ і Docker (для локальної PostgreSQL; можна й власна, тоді змін у коді не треба).
 
 ```bash
-# 1. База даних
-mysql -u root -p -e "CREATE DATABASE mycelia CHARACTER SET utf8mb4;"
+# 1. База даних (PostgreSQL у Docker, дані зберігаються між запусками)
+docker compose up -d
 
 # 2. Налаштування сервера
-cp server/.env.example server/.env      # впиши DATABASE_URL і JWT_SECRET
+cp server/.env.example server/.env      # локальні рядки підключення вже готові, змінити треба лише JWT_SECRET
 
 # 3. Залежності (в корені; тут же згенерується клієнт Prisma)
 npm install
 
 # 4. Таблиці
-cd server && npx prisma migrate dev --name init && cd ..
+npm run prisma:deploy -w server
 
 # 5. Два термінали
 npm run dev:server      # http://localhost:3000
 npm run dev:client      # http://localhost:5173
 ```
+
+Зміна `schema.prisma` на етапі розробки: `npm run prisma:migrate -w server` створить нову міграцію.
 
 Тести: `npm test` (сервер і клієнт). Вони не потребують БД.
 
@@ -102,9 +104,8 @@ npm run dev:client      # http://localhost:5173
 
 ## Відомі обмеження
 
-- MySQL обмежує вкладеність каскадних видалень самопосилання 15 рівнями. Видалення вузла це
-  враховує (`NodeRepository.deleteLeafFirst`), але видалення цілої карти з гілкою глибшою за 15
-  рівнів на MySQL може не пройти. У PostgreSQL такого обмеження немає.
+- Видалення вузла йде спершу листками (`NodeRepository.deleteLeafFirst`): це лишилось від MySQL, де каскад
+  самопосилання обмежений 15 рівнями. На PostgreSQL обмеження немає, і код просто безпечно працює на обох.
 
 ## Безпека (що вже закладено)
 
@@ -115,19 +116,32 @@ npm run dev:client      # http://localhost:5173
 - Rate limit на `/api/auth`: 20 спроб за 15 хвилин з одного IP.
 - `helmet`, CORS лише для `CLIENT_ORIGIN`, ліміт тіла запиту 1 МБ, валідація всіх входів через zod.
 
-## Перехід на PostgreSQL (Supabase)
+## Деплой (Render + Supabase)
 
-1. У `server/prisma/schema.prisma` змінити `provider = "mysql"` на `"postgresql"`.
-2. У `.env` поставити рядок підключення Supabase.
-3. Видалити `server/prisma/migrations` і створити заново: `npx prisma migrate dev --name init`.
+Схема: **один безкоштовний сервіс Render** (Express віддає і API, і зібраний клієнт, тому cookie авторизації працює
+без налаштувань між сайтами) + **Supabase** для бази (PostgreSQL) і файлів (Storage). Диск на Render тимчасовий,
+тому файли не можуть лежати на ньому. Опис сервісу в `render.yaml`.
 
-Код сервісів і репозиторіїв не змінюється.
+**1. Supabase**
+1. Створи проєкт (регіон ближчий до Frankfurt) і запам'ятай пароль бази.
+2. Storage → New bucket: назва `attachments`, **Public bucket вимкнений** (файли віддає наш API після перевірки власника).
+3. Project Settings → Database → Connection string → *Connection pooling*: візьми два рядки
+   (Transaction pooler, порт 6543, додай `?pgbouncer=true`, і Session pooler, порт 5432).
+   Прямий хост Supabase доступний лише по IPv6, Render його не бачить, тому саме пулери.
+4. Project Settings → API: `Project URL` і ключ `service_role`.
 
-## Деплой (Render)
+**2. Render**
+1. New → Blueprint → вибери цей репозиторій (Render прочитає `render.yaml`).
+2. У Environment внеси: `DATABASE_URL` (transaction pooler), `DIRECT_URL` (session pooler), `SUPABASE_URL`,
+   `SUPABASE_SERVICE_KEY`. `JWT_SECRET` Render згенерує сам.
+3. Збірка: `npm install --include=dev` → збірка клієнта → `prisma migrate deploy` (таблиці створюються самі) → запуск.
+4. Перевірка: `https://<назва>.onrender.com/api/health` має відповісти `{"status":"ok"}`.
 
-Клієнт і API на різних доменах, тому на сервері: `NODE_ENV=production`, `COOKIE_SAMESITE=none`,
-`CLIENT_ORIGIN=<адреса клієнта>`; на клієнті: `VITE_API_URL=<адреса API>/api`.
-Команда збірки сервера: `npm install && npx prisma migrate deploy`.
+Особливості безкоштовних тарифів: Render засинає за 15 хвилин без запитів (перший запит після сну повільний),
+Supabase ставить проєкт на паузу після тижня без активності (відновлюється кнопкою в панелі).
+
+**Секрети** живуть лише в змінних оточення (Render і локальний `server/.env`). Файл `server/.env` у git не
+потрапляє. Якщо ключ колись було закомічено, його треба змінити, видалення з репозиторію не допоможе.
 
 ## Карта патернів
 
@@ -205,10 +219,11 @@ npm run dev:client      # http://localhost:5173
 - ключ у сховищі `mapId/uuid` не містить імені від користувача, і формат ключа перевіряється;
 - чужа карта чи вкладення дають 404; видалення вузла, вкладення чи карти стирає й файл.
 
-Файли зараз лежать у `server/uploads` (папка в `.gitignore`, змінюється через `UPLOAD_DIR`).
-Це Strategy: `AttachmentService` знає лише інтерфейс `put / size / read / remove`
-(`server/src/storage/`), тож перехід на Supabase Storage означає ще один клас того ж інтерфейсу.
-На Render диск тимчасовий, тому до деплою сховище треба перенести (див. «Деплой»).
+Це Strategy: `AttachmentService` знає лише інтерфейс `put / size / read / remove` (`server/src/storage/`).
+Реалізацій дві, вибір за налаштуваннями (`storage/index.js`): без Supabase файли лежать у `server/uploads`
+(`LocalDiskStorage`, папка в `.gitignore`, шлях у `UPLOAD_DIR`), а з `SUPABASE_URL` і `SUPABASE_SERVICE_KEY`
+вони йдуть у приватний бакет Supabase Storage (`SupabaseStorage`, REST без додаткових залежностей).
+На Render диск тимчасовий, тому в продакшені використовується друга реалізація (див. «Деплой»).
 
 ## Prototype: дублювання і шаблони
 

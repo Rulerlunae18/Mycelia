@@ -1,0 +1,33 @@
+# Render Blueprint: один безкоштовний сервіс. Express віддає і API, і зібраний клієнт (client/dist),
+# тож усе на одному домені й cookie авторизації працює без налаштувань між сайтами.
+# База і файли живуть у Supabase (Postgres + Storage), бо диск на Render тимчасовий.
+services:
+  - type: web
+    name: mycelia
+    runtime: node
+    region: frankfurt
+    plan: free
+    # --include=dev: збірка клієнта (vite) і prisma CLI лежать у devDependencies, а Render ставить NODE_ENV=production
+    buildCommand: npm install --include=dev && npm run build -w client && npm run prisma:deploy -w server
+    startCommand: npm start -w server
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: NODE_ENV
+        value: production
+      # Render сам згенерує довгий випадковий секрет при першому розгортанні
+      - key: JWT_SECRET
+        generateValue: true
+      # Решту вносиш вручну в Render → Environment (дивись README, розділ «Деплой»)
+      - key: DATABASE_URL
+        sync: false
+      - key: DIRECT_URL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: SUPABASE_BUCKET
+        value: attachments

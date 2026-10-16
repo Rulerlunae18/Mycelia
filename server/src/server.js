@@ -15,7 +15,7 @@ import { LinkService } from './services/LinkService.js';
 import { MapService } from './services/MapService.js';
 import { NodeService } from './services/NodeService.js';
 import { TemplateService } from './services/TemplateService.js';
-import { LocalDiskStorage } from './storage/LocalDiskStorage.js';
+import { createStorage } from './storage/index.js';
 
 // Точка складання: репозиторії -> сервіси -> HTTP-застосунок.
 const authService = new AuthService({
@@ -25,12 +25,12 @@ const authService = new AuthService({
 });
 const mapRepository = new MapRepository(prisma);
 const nodeRepository = new NodeRepository(prisma);
-// Сховище файлів: зараз папка на диску, потім Supabase Storage (той самий інтерфейс)
+// Сховище файлів (Strategy): Supabase Storage, якщо задано ключі, інакше папка на диску
 const attachmentService = new AttachmentService({
   mapRepository,
   nodeRepository,
   attachmentRepository: new AttachmentRepository(prisma),
-  storage: new LocalDiskStorage(config.uploadDir),
+  storage: createStorage(config),
 });
 const mapService = new MapService({ mapRepository, attachmentService });
 const templateService = new TemplateService({ mapRepository, nodeRepository, registry: buildTemplateRegistry() });
@@ -42,7 +42,7 @@ const boundaryService = new BoundaryService({
 const linkService = new LinkService({ mapRepository, nodeRepository, linkRepository: new LinkRepository(prisma) });
 const nodeService = new NodeService({ mapRepository, nodeRepository, boundaryService, attachmentService });
 
-const app = createApp({ authService, mapService, nodeService, boundaryService, linkService, attachmentService, templateService });
+const app = createApp({ authService, mapService, nodeService, boundaryService, linkService, attachmentService, templateService, clientDist: config.clientDist });
 const server = app.listen(config.port, () => {
   console.log(`Mycelia API: http://localhost:${config.port}`);
 });
