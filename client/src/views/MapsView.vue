@@ -229,9 +229,6 @@ onMounted(load);
  
 <style scoped>
 .maps-container {
-  --ink: var(--ink);
-  --soft: var(--soft);
-  --glow: var(--glow);
   --line: rgb(var(--glow-rgb) / 0.22);
   --danger: #ff8a78;
   --pad: 38px; /* відступ списку: тут проходить «нитка» */
