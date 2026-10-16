@@ -1,0 +1,17 @@
+# Локальна PostgreSQL для розробки: `docker compose up -d`.
+# Рядок підключення для server/.env дивись у server/.env.example.
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: mycelia
+      POSTGRES_PASSWORD: mycelia
+      POSTGRES_DB: mycelia
+    ports:
+      - '5432:5432'
+    volumes:
+      - mycelia-db:/var/lib/postgresql/data
+
+volumes:
+  mycelia-db:

@@ -10,7 +10,7 @@ import { NodeService } from '../../src/services/NodeService.js';
 import { FakeAttachmentRepository, FakeBoundaryRepository, FakeLinkRepository, FakeStorage, FakeMapRepository, FakeNodeRepository, FakeUserRepository } from './fakeRepositories.js';
 
 // storage можно подсмотреть в тестах: app.locals.storage
-export function makeTestApp({ maxLinks } = {}) {
+export function makeTestApp({ maxLinks, clientDist } = {}) {
   const authService = new AuthService({
     userRepository: new FakeUserRepository(),
     jwtSecret: 'test-secret-test-secret-test-secret',
@@ -31,7 +31,7 @@ export function makeTestApp({ maxLinks } = {}) {
   const linkService = new LinkService({ mapRepository, nodeRepository, linkRepository: new FakeLinkRepository(mapRepository), maxLinks });
   const nodeService = new NodeService({ mapRepository, nodeRepository, boundaryService, attachmentService });
   const templateService = new TemplateService({ mapRepository, nodeRepository, registry: buildTemplateRegistry() });
-  const app = createApp({ authService, mapService, nodeService, boundaryService, linkService, attachmentService, templateService });
+  const app = createApp({ authService, mapService, nodeService, boundaryService, linkService, attachmentService, templateService, clientDist });
   app.locals.storage = storage;
   return app;
 }

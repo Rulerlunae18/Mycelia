@@ -1,5 +1,5 @@
 // Єдине місце, де код знає про Prisma для користувачів.
-// Перехід MySQL -> PostgreSQL торкнеться лише schema.prisma, а не цього шару.
+// Зміна СУБД торкається лише schema.prisma, а не цього шару.
 export class UserRepository {
   constructor(prisma) {
     this.prisma = prisma;

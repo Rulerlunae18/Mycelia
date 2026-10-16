@@ -1,6 +1,8 @@
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import express from 'express';
+import { existsSync } from 'node:fs';
+import path from 'node:path';
 import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
 import { config } from './config.js';
@@ -15,13 +17,23 @@ import { nodeRoutes } from './routes/nodes.routes.js';
 
 // Фабрика застосунку: сервіси приходять ззовні (dependency injection).
 // У server.js вони працюють із Prisma, у тестах із фейковими репозиторіями.
-export function createApp({ authService, mapService, nodeService, boundaryService, linkService, attachmentService, templateService }) {
+export function createApp({ authService, mapService, nodeService, boundaryService, linkService, attachmentService, templateService, clientDist = null }) {
   const app = express();
 
   // Render стоїть за проксі: потрібно для rate limit і Secure-cookie
   app.set('trust proxy', 1);
 
-  app.use(helmet());
+  // Стандартний захист helmet; додатково дозволено blob: для картинок (експорт PNG) і відео (перегляд вкладень)
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          'img-src': ["'self'", 'data:', 'blob:'],
+          'media-src': ["'self'", 'blob:'],
+        },
+      },
+    }),
+  );
   app.use(cors({ origin: config.clientOrigin, credentials: true }));
   app.use(express.json({ limit: '1mb' }));
   app.use(cookieParser());
@@ -55,6 +67,21 @@ export function createApp({ authService, mapService, nodeService, boundaryServic
   app.use('/api/maps/:mapId/links', linkRoutes({ linkService, requireAuth }));
 
   app.use('/api/maps/:mapId', attachmentRoutes({ attachmentService, requireAuth }));
+
+  // Продакшен: ту саму адресу обслуговує і API, і зібраний клієнт (client/dist), тож cookie без ускладнень.
+  // Файли з хешем у назві кешуються надовго, index.html ніколи; невідомі адреси без /api віддають index.html (SPA).
+  if (clientDist && existsSync(path.join(clientDist, 'index.html'))) {
+    app.use(express.static(clientDist, {
+      index: false,
+      setHeaders: (res, file) => {
+        if (file.includes(`${path.sep}assets${path.sep}`)) res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      },
+    }));
+    app.get(/^\/(?!api(\/|$)).*/, (_req, res) => {
+      res.setHeader('Cache-Control', 'no-cache');
+      res.sendFile(path.join(clientDist, 'index.html'));
+    });
+  }
 
   app.use(notFoundHandler);
   app.use(errorHandler);
