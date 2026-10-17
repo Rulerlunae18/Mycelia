@@ -8,9 +8,7 @@ generator client {
 
 datasource db {
   provider  = "postgresql"
-  // Рядок для застосунку (у Supabase це пул з'єднань, порт 6543, ?pgbouncer=true)
   url       = env("DATABASE_URL")
-  // Прямий рядок лише для міграцій (Supabase: session pooler, порт 5432). Локально збігається з DATABASE_URL.
   directUrl = env("DIRECT_URL")
 }
 
